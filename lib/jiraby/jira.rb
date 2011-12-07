@@ -1,6 +1,12 @@
+# Builtin
+require 'generator'
+
+# Gems
 require 'rubygems'
 require 'yajl'
 require 'rest_client'
+
+# Local
 require 'jiraby/issue'
 
 module Jiraby
@@ -33,6 +39,7 @@ module Jiraby
         :username => username,
         :password => password,
       })
+      # TODO: Handle 401 unauthorized
       response = RestClient.post(
         auth_url, request_json,
         :content_type => :json, :accept => :json)
@@ -48,7 +55,8 @@ module Jiraby
 
     # Log out of Jira
     def logout
-      # TODO
+      # TODO: Handle 401 unauthorized
+      RestClient.delete(auth_url, headers)
     end
 
 
@@ -63,7 +71,7 @@ module Jiraby
 
     def search(jql, start_at, max_results)
       return post(
-        rest_url('search'),
+        'search',
         {
           :jql => jql,
           :startAt => start_at,
@@ -73,11 +81,55 @@ module Jiraby
     end
 
 
-    # Return the issue with the given key
+    # Return the Issue with the given key.
     def issue(key)
       return Jiraby::Issue.new(get("issue/#{key}"))
     end
 
+
+    # Return the total number of issues matching the given JQL query.
+    def count(jql='')
+      search(jql, 0, 1)['total']
+    end
+
+
+    # Return all of the issue keys matching the given JQL query.
+    def issue_keys(jql='')
+      # Issue keys will be accumulated here
+      keys = []
+      # Fetch up to 50 issue keys at a time
+      max_results = 50
+      start = 0
+
+      # Get the first batch
+      results = search(jql, start, max_results)
+
+      # Until we've gotten all the issues, get successive batches
+      while results['total'] >= (start + results['issues'].length)
+        keys.concat(results['issues'].collect {|iss| iss['key']})
+        start += max_results
+        results = search(jql, start, max_results)
+      end
+
+      return keys
+    end
+
+
+    # Yield all of the Issues matching the given JQL query.
+    def issues(jql='')
+      keys = issue_keys(jql)
+      issue_generator = Generator.new do |g|
+        for key in keys
+          g.yield issue(key)
+        end
+      end
+      return issue_generator
+    end
+
+
+    # Submit a POST request to the given REST subpath, including
+    # the given JSON parameters. If the request succeeds, return
+    # a JSON-formatted response. Otherwise, return nil.
     def post(subpath, params={})
       json = Yajl::Encoder.encode(params)
       begin
@@ -90,6 +142,8 @@ module Jiraby
     end
 
 
+    # Submit a GET request to the given REST subpath. If the request succeeds,
+    # return a JSON-formatted response. Otherwise, return nil.
     def get(subpath)
       begin
         response = RestClient.get(rest_url(subpath), headers)

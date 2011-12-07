@@ -8,9 +8,19 @@ module Jiraby
       @json = json
     end
 
+    # Return the key identifier for this issue
+    def key
+      @json['key']
+    end
+
     # Return all field names in this issue
     def fields
       @json['fields'].keys
+    end
+
+    # Return the field name (label) for the given field
+    def field_name(field)
+      @json['fields'][field]['name']
     end
 
     # Allow directly accessing field values as if they were attributes
