@@ -1,0 +1,21 @@
+PATH
+  remote: .
+  specs:
+    jiraby (0.0.1)
+      rest-client
+      yajl-ruby
+
+GEM
+  remote: http://rubygems.org/
+  specs:
+    mime-types (1.17.2)
+    rest-client (1.6.7)
+      mime-types (>= 1.16)
+    yajl-ruby (1.1.0)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  bundler (~> 1.0)
+  jiraby!
