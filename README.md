@@ -4,6 +4,8 @@ Jiraby
 Jiraby is a Ruby wrapper for the [JIRA](http://www.atlassian.com/JIRA)
 REST API.
 
+[Full documentation is on rdoc.info](http://rubydoc.info/github/a-e/jiraby/master/frames).
+
 
 Usage
 -----
