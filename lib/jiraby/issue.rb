@@ -31,5 +31,6 @@ module Jiraby
         super
       end
     end
+
   end
 end

@@ -53,11 +53,22 @@ require 'jiraby/issue'
 module Jiraby
 
   class Jira
-    # Initialize a Jira instance with the given parameters.
+    # Initialize a Jira instance at the given URL.
     # Call {#login} separately to log into Jira.
-    def initialize(url, opts={})
-      @url = url
-      @opts = opts
+    #
+    # @param [String] url
+    #   Full URL of the JIRA instance to connect to. If this does not begin
+    #   with http: or https:, then http:// is assumed.
+    # @param [String] api_version
+    #   The API version to use (`2.0.alpha1` for Jira 4.x, `2` for Jira 5.x)
+    #
+    def initialize(url, api_version='2.0.alpha1')
+      if url =~ /https:|http:/
+        @url = url
+      else
+        @url = "http://#{url}"
+      end
+      @api_version = api_version
       @rest_session = nil
     end
 
@@ -77,7 +88,7 @@ module Jiraby
     #   The full URL for the given REST API subpath
     #
     def rest_url(subpath)
-      "#{@url}/rest/api/2.0.alpha1/#{subpath}"
+      "#{@url}/rest/api/#{@api_version}/#{subpath}"
     end
 
 
@@ -97,9 +108,14 @@ module Jiraby
         :password => password,
       })
       # TODO: Handle 401 unauthorized
-      response = RestClient.post(
-        auth_url, request_json,
-        :content_type => :json, :accept => :json)
+      begin
+        response = RestClient.post(
+          auth_url, request_json,
+          :content_type => :json, :accept => :json)
+      rescue RestClient::Unauthorized => e
+        puts e.inspect
+        return false
+      end
       if response
         session = Yajl::Parser.parse(response.to_str)['session']
         @rest_session = {session['name'] => session['value']}
@@ -113,7 +129,13 @@ module Jiraby
     # Log out of Jira
     def logout
       # TODO: Handle 401 unauthorized
-      RestClient.delete(auth_url, headers)
+      begin
+        RestClient.delete(auth_url, headers)
+      rescue RestClient::Unauthorized => e
+        puts e.message
+        return false
+      end
+      return true
     end
 
 
@@ -162,7 +184,12 @@ module Jiraby
     #   An Issue populated with data returned by the API
     #
     def issue(key)
-      return Jiraby::Issue.new(get("issue/#{key}"))
+      json = get("issue/#{key}")
+      if json
+        return Jiraby::Issue.new(json)
+      else
+        return nil
+      end
     end
 
 
@@ -258,14 +285,17 @@ module Jiraby
     #
     # @param [String] subpath
     #   The last part of the REST API path you want to post to
+    # @param [Hash] params
+    #   Key => value parameters to include in the request
     #
     # @return [Hash, nil]
     #   Raw JSON response converted to a Ruby Hash, or nil
     #   if the request failed.
     #
-    def get(subpath)
+    def get(subpath, params={})
+      merged_params = headers.merge({:params => params})
       begin
-        response = RestClient.get(rest_url(subpath), headers)
+        response = RestClient.get(rest_url(subpath), merged_params)
       rescue RestClient::ResourceNotFound
         return nil
       else
