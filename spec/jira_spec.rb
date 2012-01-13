@@ -56,8 +56,17 @@ describe Jiraby::Jira do
       @jira.login('epierce', 'epierce').should be_true
     end
 
-    it "returns false on failed login" do
+    it "returns false on invalid username" do
       @jira.login('bogus', 'bogus').should be_false
+    end
+
+    it "returns false on invalid password" do
+      @jira.login('epierce', 'bogus').should be_false
+    end
+
+    it "returns false when Jira connection can't be made" do
+      jira = Jiraby::Jira.new('localhost:12345', '2')
+      jira.login('epierce', 'epierce').should be_false
     end
   end
 
@@ -73,6 +82,45 @@ describe Jiraby::Jira do
 
     it "returns false on failed logout" do
       @jira.logout.should be_false
+    end
+
+    it "returns false when Jira connection can't be made" do
+      jira = Jiraby::Jira.new('localhost:12345', '2')
+      jira.logout.should be_false
+    end
+  end
+
+  describe '#issue' do
+    before(:each) do
+      @jira = Jiraby::Jira.new('localhost:8080', '2')
+      @jira.login('epierce', 'epierce')
+    end
+
+    it "returns an Issue for valid issue key" do
+      @jira.issue('TST-1').should be_an_instance_of(Jiraby::Issue)
+    end
+
+    it "returns nil for invalid issue key" do
+      @jira.issue('BOGUS-429').should be_nil
+    end
+  end
+
+  describe '#search' do
+    before(:each) do
+      @jira = Jiraby::Jira.new('localhost:8080', '2')
+      @jira.login('epierce', 'epierce')
+    end
+
+    it "returns a JSON-style hash of data" do
+      json = @jira.search('', 0, 1)
+      json.keys.should include('issues')
+    end
+
+    it "limits results to max_results" do
+      [1, 5, 10].each do |max_results|
+        json = @jira.search('', 0, max_results)
+        json['issues'].count.should be <= max_results
+      end
     end
   end
 end

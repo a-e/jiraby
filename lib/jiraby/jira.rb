@@ -124,12 +124,16 @@ module Jiraby
         response = RestClient.post(
           auth_url, request_json,
           :content_type => :json, :accept => :json)
+      # TODO: Somehow log or otherwise indicate the cause of failure here
       rescue RestClient::Unauthorized => e
+        return false
+      rescue Errno::ECONNREFUSED => e
         return false
       end
       if response
         session = Yajl::Parser.parse(response.to_str)['session']
         @rest_session = {session['name'] => session['value']}
+      # TODO: Determine if it's even possible to get here
       else
         @rest_session = nil
       end
@@ -141,7 +145,10 @@ module Jiraby
     def logout
       begin
         RestClient.delete(auth_url, headers)
+      # TODO: Somehow log or otherwise indicate the cause of failure here
       rescue RestClient::Unauthorized => e
+        return false
+      rescue Errno::ECONNREFUSED => e
         return false
       end
       return true
