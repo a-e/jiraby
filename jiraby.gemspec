@@ -12,6 +12,8 @@ Gem::Specification.new do |s|
   s.add_dependency 'rest-client'
   s.add_dependency 'yajl-ruby'
 
+  s.add_development_dependency 'rspec'
+
   s.files = `git ls-files`.split("\n")
   s.require_path = 'lib'
 end

@@ -63,6 +63,9 @@ module Jiraby
     #   The API version to use (`2.0.alpha1` for Jira 4.x, `2` for Jira 5.x)
     #
     def initialize(url, api_version='2.0.alpha1')
+      if !known_api_versions.include?(api_version)
+        raise ArgumentError.new("Unknown Jira API version: #{api_version}")
+      end
       if url =~ /https:|http:/
         @url = url
       else
@@ -72,8 +75,17 @@ module Jiraby
       @rest_session = nil
     end
 
+    attr_reader :url, :api_version
+
+    # Return a list of known Jira API versions.
+    #
+    def known_api_versions
+      return ['2.0.alpha1', '2']
+    end
+
 
     # Return the URL for authenticating to Jira.
+    #
     def auth_url
       "#{@url}/rest/auth/1/session"
     end
@@ -107,7 +119,6 @@ module Jiraby
         :username => username,
         :password => password,
       })
-      # TODO: Handle 401 unauthorized
       begin
         response = RestClient.post(
           auth_url, request_json,
@@ -128,11 +139,9 @@ module Jiraby
 
     # Log out of Jira
     def logout
-      # TODO: Handle 401 unauthorized
       begin
         RestClient.delete(auth_url, headers)
       rescue RestClient::Unauthorized => e
-        puts e.message
         return false
       end
       return true
@@ -255,6 +264,21 @@ module Jiraby
     end
 
 
+    # Raise an exception if the current API version is one of those listed.
+    #
+    # @param [String] feature
+    #   Name or short description of the feature in question
+    # @param [Array] api_versions
+    #   One or more version strings for Jira APIs that do not support the
+    #   feature in question
+    #
+    def not_implemented_in(feature, *api_versions)
+      if api_versions.include?(@api_version)
+        raise NotImplementedError,
+          "#{feature} not supported by version #{@api_version} of the Jira API"
+      end
+    end
+
     # Submit a POST request to the given REST subpath, including
     # the given JSON parameters. If the request succeeds, return
     # a JSON-formatted response. Otherwise, return nil.
@@ -267,6 +291,8 @@ module Jiraby
     # @return [Hash]
     #   Raw JSON response converted to a Ruby Hash, or nil
     #   if the request failed.
+    #
+    # TODO: Factor this out into a mixin or superclass
     #
     def post(subpath, params={})
       json = Yajl::Encoder.encode(params)
@@ -291,6 +317,8 @@ module Jiraby
     # @return [Hash, nil]
     #   Raw JSON response converted to a Ruby Hash, or nil
     #   if the request failed.
+    #
+    # TODO: Factor this out into a mixin or superclass
     #
     def get(subpath, params={})
       merged_params = headers.merge({:params => params})
