@@ -1,4 +1,4 @@
-require 'spec_helper'
+require 'spec/spec_helper'
 
 describe Jiraby::Jira do
   describe '#initialize' do
@@ -44,6 +44,35 @@ describe Jiraby::Jira do
     it "returns nil when API version is not one of those listed" do
       jira = Jiraby::Jira.new('jira.example.com', '2')
       jira.not_implemented_in('Issue creation', '2.0.alpha1').should be_nil
+    end
+  end
+
+  describe '#login' do
+    before(:each) do
+      @jira = Jiraby::Jira.new('localhost:8080', '2')
+    end
+
+    it "returns true on successful login" do
+      @jira.login('epierce', 'epierce').should be_true
+    end
+
+    it "returns false on failed login" do
+      @jira.login('bogus', 'bogus').should be_false
+    end
+  end
+
+  describe '#logout' do
+    before(:each) do
+      @jira = Jiraby::Jira.new('localhost:8080', '2')
+    end
+
+    it "returns true on successful logout" do
+      @jira.login('epierce', 'epierce')
+      @jira.logout.should be_true
+    end
+
+    it "returns false on failed logout" do
+      @jira.logout.should be_false
     end
   end
 end

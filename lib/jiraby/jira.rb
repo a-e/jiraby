@@ -77,6 +77,7 @@ module Jiraby
 
     attr_reader :url, :api_version
 
+
     # Return a list of known Jira API versions.
     #
     def known_api_versions
@@ -124,7 +125,6 @@ module Jiraby
           auth_url, request_json,
           :content_type => :json, :accept => :json)
       rescue RestClient::Unauthorized => e
-        puts e.inspect
         return false
       end
       if response
