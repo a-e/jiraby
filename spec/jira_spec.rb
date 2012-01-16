@@ -123,5 +123,44 @@ describe Jiraby::Jira do
       end
     end
   end
+
+  # TODO: Populate some more test issues in order to properly test this
+  describe '#issue_keys' do
+    before(:each) do
+      @jira = Jiraby::Jira.new('localhost:8080', '2')
+      @jira.login('epierce', 'epierce')
+    end
+
+    it "returns issue keys matching a JQL query" do
+      @jira.issue_keys('key = TST-1').should == ['TST-1']
+    end
+
+    it "returns all issue keys when JQL is empty" do
+      @jira.issue_keys('').should == ['TST-1']
+    end
+  end
+
+  # TODO: Populate some more test issues in order to properly test this
+  describe '#issues' do
+    before(:each) do
+      @jira = Jiraby::Jira.new('localhost:8080', '2')
+      @jira.login('epierce', 'epierce')
+    end
+
+    it "returns a Generator" do
+      @jira.issues.should be_an_instance_of(Generator)
+    end
+
+    it "yields issues matching a JQL query" do
+      @jira.issues('key = TST-1').each do |issue|
+        issue.key.should == 'TST-1'
+      end
+    end
+
+    it "yields all issues when JQL is empty" do
+      keys = @jira.issues('').collect {|i| i.key}
+      keys.should == ['TST-1']
+    end
+  end
 end
 

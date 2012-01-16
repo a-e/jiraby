@@ -19,11 +19,13 @@ module Jiraby
     end
 
     # Return the field name (label) for the given field
+    # FIXME: Different keys for alpha vs. 2 API
     def field_name(field)
       @json['fields'][field]['name']
     end
 
     # Allow directly accessing field values as if they were attributes
+    # FIXME: Different keys for alpha vs. 2 API
     def method_missing(meth, *args, &block)
       if @json['fields'].keys.include?(meth.to_s)
         return @json['fields'][meth.to_s]['value']
