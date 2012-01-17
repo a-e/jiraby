@@ -162,5 +162,49 @@ describe Jiraby::Jira do
       keys.should == ['TST-1']
     end
   end
+
+  # TODO: Populate some more test issues in order to properly test this
+  describe '#count' do
+    before(:each) do
+      @jira = Jiraby::Jira.new('localhost:8080', '2')
+      @jira.login('epierce', 'epierce')
+    end
+
+    it "returns the number of issues matching a JQL query" do
+      @jira.count('key = TST-1').should == 1
+    end
+
+    it "returns a count of all issues when JQL is empty" do
+      @jira.count('').should == 1
+    end
+  end
+
+  describe '#get' do
+    before(:each) do
+      @jira = Jiraby::Jira.new('localhost:8080', '2')
+      @jira.login('epierce', 'epierce')
+    end
+
+    it "returns JSON data as a Ruby hash" do
+      @jira.get('issue/TST-1').should be_an_instance_of(Hash)
+    end
+
+    it "returns nil for unknown subpath" do
+      @jira.get('bogus/subpath').should == nil
+    end
+  end
+
+  describe '#post' do
+    before(:each) do
+      @jira = Jiraby::Jira.new('localhost:8080', '2')
+      @jira.login('epierce', 'epierce')
+    end
+
+    it "returns JSON data as a Ruby hash"
+
+    it "returns nil for unknown subpath" do
+      @jira.post('bogus/subpath').should == nil
+    end
+  end
 end
 

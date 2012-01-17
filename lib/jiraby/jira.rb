@@ -62,6 +62,8 @@ module Jiraby
     # @param [String] api_version
     #   The API version to use (`2.0.alpha1` for Jira 4.x, `2` for Jira 5.x)
     #
+    # TODO: Handle the case where the wrong API version is used for a given
+    # Jira instance (should give 404s when resources are requested)
     def initialize(url, api_version='2.0.alpha1')
       if !known_api_versions.include?(api_version)
         raise ArgumentError.new("Unknown Jira API version: #{api_version}")
