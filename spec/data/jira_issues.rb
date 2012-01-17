@@ -18,10 +18,10 @@ JIRA_2_ISSUE = {
     },
     "timeestimate" => 60,
     "reporter" => {
-      "name" => "epierce",
-      "self" => "http://localhost:8080/rest/api/2/user?username=epierce",
+      "name" => "user",
+      "self" => "http://localhost:8080/rest/api/2/user?username=user",
       "displayName" => "Eric Pierce",
-      "emailAddress" => "epierce@automation-excellence.com",
+      "emailAddress" => "user@example.com",
       "avatarUrls" => {
         "48x48" => "http://localhost:8080/secure/useravatar?avatarId=10122",
         "16x16" => "http://localhost:8080/secure/useravatar?size=small&avatarId=10122",
@@ -57,8 +57,8 @@ JIRA_2_ISSUE = {
     "assignee" => {
       "name" => "admin",
       "self" => "http://localhost:8080/rest/api/2/user?username=admin",
-      "displayName" => "Administrator",
-      "emailAddress" => "epierce@automation-excellence.com",
+      "displayName" => "User",
+      "emailAddress" => "user@example.com",
       "avatarUrls" => {
         "48x48" => "http://localhost:8080/secure/useravatar?avatarId=10122",
         "16x16" => "http://localhost:8080/secure/useravatar?size=small&avatarId=10122",
@@ -117,8 +117,8 @@ JIRA_2_ALPHA_ISSUE = {
       "name" => "reporter",
       "type" => "com.opensymphony.user.User",
       "value" => {
-        "name" => "epierce",
-        "self" => "http://localhost:8080/rest/api/2.0.alpha1/user?username=epierce",
+        "name" => "user",
+        "self" => "http://localhost:8080/rest/api/2.0.alpha1/user?username=user",
         "displayName" => "Pierce, Eric",
         "active" => true,
       },
@@ -176,8 +176,8 @@ JIRA_2_ALPHA_ISSUE = {
       "name" => "assignee",
       "type" => "com.opensymphony.user.User",
       "value" => {
-        "name" => "epierce",
-        "self" => "http://localhost:8080/rest/api/2.0.alpha1/user?username=epierce",
+        "name" => "user",
+        "self" => "http://localhost:8080/rest/api/2.0.alpha1/user?username=user",
         "displayName" => "Pierce, Eric",
         "active" => true,
       },

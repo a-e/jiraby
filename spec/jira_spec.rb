@@ -53,7 +53,7 @@ describe Jiraby::Jira do
     end
 
     it "returns true on successful login" do
-      @jira.login('epierce', 'epierce').should be_true
+      @jira.login('user', 'user').should be_true
     end
 
     it "returns false on invalid username" do
@@ -61,12 +61,12 @@ describe Jiraby::Jira do
     end
 
     it "returns false on invalid password" do
-      @jira.login('epierce', 'bogus').should be_false
+      @jira.login('user', 'bogus').should be_false
     end
 
     it "returns false when Jira connection can't be made" do
       jira = Jiraby::Jira.new('localhost:12345', '2')
-      jira.login('epierce', 'epierce').should be_false
+      jira.login('user', 'user').should be_false
     end
   end
 
@@ -76,7 +76,7 @@ describe Jiraby::Jira do
     end
 
     it "returns true on successful logout" do
-      @jira.login('epierce', 'epierce')
+      @jira.login('user', 'user')
       @jira.logout.should be_true
     end
 
@@ -93,7 +93,7 @@ describe Jiraby::Jira do
   describe '#issue' do
     before(:each) do
       @jira = Jiraby::Jira.new('localhost:8080', '2')
-      @jira.login('epierce', 'epierce')
+      @jira.login('user', 'user')
     end
 
     it "returns an Issue for valid issue key" do
@@ -108,7 +108,7 @@ describe Jiraby::Jira do
   describe '#search' do
     before(:each) do
       @jira = Jiraby::Jira.new('localhost:8080', '2')
-      @jira.login('epierce', 'epierce')
+      @jira.login('user', 'user')
     end
 
     it "returns a JSON-style hash of data" do
@@ -128,7 +128,7 @@ describe Jiraby::Jira do
   describe '#issue_keys' do
     before(:each) do
       @jira = Jiraby::Jira.new('localhost:8080', '2')
-      @jira.login('epierce', 'epierce')
+      @jira.login('user', 'user')
     end
 
     it "returns issue keys matching a JQL query" do
@@ -144,7 +144,7 @@ describe Jiraby::Jira do
   describe '#issues' do
     before(:each) do
       @jira = Jiraby::Jira.new('localhost:8080', '2')
-      @jira.login('epierce', 'epierce')
+      @jira.login('user', 'user')
     end
 
     it "returns a Generator" do
@@ -167,7 +167,7 @@ describe Jiraby::Jira do
   describe '#count' do
     before(:each) do
       @jira = Jiraby::Jira.new('localhost:8080', '2')
-      @jira.login('epierce', 'epierce')
+      @jira.login('user', 'user')
     end
 
     it "returns the number of issues matching a JQL query" do
@@ -182,7 +182,7 @@ describe Jiraby::Jira do
   describe '#get' do
     before(:each) do
       @jira = Jiraby::Jira.new('localhost:8080', '2')
-      @jira.login('epierce', 'epierce')
+      @jira.login('user', 'user')
     end
 
     it "returns JSON data as a Ruby hash" do
@@ -197,7 +197,7 @@ describe Jiraby::Jira do
   describe '#post' do
     before(:each) do
       @jira = Jiraby::Jira.new('localhost:8080', '2')
-      @jira.login('epierce', 'epierce')
+      @jira.login('user', 'user')
     end
 
     it "returns JSON data as a Ruby hash"
