@@ -199,7 +199,8 @@ module Jiraby
     #   The issue's unique identifier (usually like PROJ-NNN)
     #
     # @return [Issue]
-    #   An Issue populated with data returned by the API
+    #   An Issue populated with data returned by the API, or
+    #   nil if no such issue is found.
     #
     def issue(key)
       json = get("issue/#{key}")
@@ -208,6 +209,48 @@ module Jiraby
       else
         return nil
       end
+    end
+
+
+    # Create a new issue
+    #
+    # @param [String] project_key
+    #   Identifier for the project to create the issue under
+    # @param [String] issue_type
+    #   The name of an issue type. May be any issue types accepted by the given
+    #   project; typically "Bug", "Task", "Improvement", "New Feature", or
+    #   "Sub-task"
+    #
+    # @return [Issue]
+    #
+    def create_issue(project_key, issue_type='Bug')
+      not_implemented_in('create issue', '2.0.alpha1')
+    end
+
+
+    # Return a hash of issue types for the given project, indexed by the name
+    # of the issue type.
+    #
+    def issue_types(project_key)
+      not_implemented_in('issue types', '2.0.alpha1')
+      project = project_meta(project_key)
+      return nil if project.nil?
+      # Index by issue type name
+      result = {}
+      project['issuetypes'].each do |issue_type|
+        result[issue_type['name']] = issue_type
+      end
+      return result
+    end
+
+
+    # Return the 'createmeta' data for the given project key, or nil if
+    # the project is not found.
+    #
+    def project_meta(project_key)
+      not_implemented_in('project meta', '2.0.alpha1')
+      meta = get('issue/createmeta')
+      return meta['projects'].find {|proj| proj['key'] == project_key}
     end
 
 

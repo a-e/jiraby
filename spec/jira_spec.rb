@@ -179,6 +179,39 @@ describe Jiraby::Jira do
     end
   end
 
+  describe '#project_meta' do
+    before(:each) do
+      @jira = Jiraby::Jira.new('localhost:8080', '2')
+      @jira.login('user', 'user')
+    end
+
+    it "returns the project createmeta info if the project exists" do
+      meta = @jira.project_meta('TST')
+      meta.keys.should == ['name', 'self', 'issuetypes', 'id', 'avatarUrls', 'key']
+    end
+
+    it "returns nil if the project doesn't exist" do
+      @jira.project_meta('BOGUS').should be_nil
+    end
+  end
+
+  describe '#issue_types' do
+    before(:each) do
+      @jira = Jiraby::Jira.new('localhost:8080', '2')
+      @jira.login('user', 'user')
+    end
+
+    it "returns the issue types if the project exists" do
+      types = @jira.issue_types('TST')
+      types.should_not be_nil
+      types.keys.should == ["New Feature", "Improvement", "Task", "Sub-task", "Bug"]
+    end
+
+    it "returns nil if the project doesn't exist" do
+      @jira.issue_types('BOGUS').should be_nil
+    end
+  end
+
   describe '#get' do
     before(:each) do
       @jira = Jiraby::Jira.new('localhost:8080', '2')
