@@ -7,19 +7,6 @@ REST API.
 [Full documentation is on rdoc.info](http://rubydoc.info/github/a-e/jiraby/master/frames).
 
 
-Usage
------
-
-Assuming your JIRA site is at `http://jira.enterprise.com`, and you have
-an account `picard` with password `earlgrey`, you can connect like so:
-
-    require 'jiraby'
-
-    jira = Jiraby::Jira.new('http://jira.enterprise.com')
-    jira.login('picard', 'earlgrey')
-
-
-
 Copyright
 ---------
 

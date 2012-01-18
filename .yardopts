@@ -1,0 +1,9 @@
+--readme docs/index.md
+--markup markdown
+--no-highlight
+lib/jiraby/*.rb
+-
+docs/index.md
+docs/usage.md
+docs/development.md
+docs/history.md
