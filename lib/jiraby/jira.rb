@@ -60,7 +60,7 @@ module Jiraby
     #   Full URL of the JIRA instance to connect to. If this does not begin
     #   with http: or https:, then http:// is assumed.
     # @param [String] api_version
-    #   The API version to use (`2.0.alpha1` for Jira 4.x, `2` for Jira 5.x)
+    #   The API version to use (`"2.0.alpha1"` for Jira 4.x, `"2"` for Jira 5.x)
     #
     # TODO: Handle the case where the wrong API version is used for a given
     # Jira instance (should give 404s when resources are requested)
