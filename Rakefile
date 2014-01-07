@@ -18,3 +18,16 @@ RSpec::Core::RakeTask.new(:rcov) do |t|
   ]
 end
 
+task :pry, [:jira_url] do |t, args|
+  require 'pry'
+  require 'jiraby'
+  if !args.jira_url
+    puts "Usage: rake pry[jira.host.url]"
+  else
+    jira_url = "http://#{args.jira_url}"
+    puts "Connecting to Jira at #{jira_url}"
+    jira = Jiraby::Jira.new(jira_url)
+    binding.pry
+  end
+end
+
