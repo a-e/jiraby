@@ -1,5 +1,5 @@
-require 'spec/spec_helper'
-require File.join(File.dirname(__FILE__), 'data/jira_issues')
+require_relative 'spec_helper'
+require_relative 'data/jira_issues'
 
 describe Jiraby::Issue do
   before(:each) do

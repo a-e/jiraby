@@ -1,5 +1,5 @@
 # Builtin
-require 'generator'
+require 'enumerator'
 
 # Gems
 require 'rubygems'
@@ -8,47 +8,7 @@ require 'rest_client'
 
 # Local
 require 'jiraby/issue'
-
-# JIRA REST API Methods
-# (Full list: http://docs.atlassian.com/jira/REST/latest/)
-#
-# /auth/1/session
-# /auth/1/websudo
-# /api/2.0.alpha1/issueLink
-# /api/2.0.alpha1/issue/{issueKey}
-# /api/2.0.alpha1/issue/{issueKey}/transitions
-# /api/2.0.alpha1/issue/{issueKey}/votes
-# /api/2.0.alpha1/issue/{issueKey}/watchers
-# /api/2.0.alpha1/groups/picker?query
-# /api/2.0.alpha1/version
-# /api/2.0.alpha1/version/{id}?moveFixIssuesTo&moveAffectedIssuesTo
-# /api/2.0.alpha1/version/{id}/relatedIssueCounts
-# /api/2.0.alpha1/version/{id}/unresolvedIssueCount
-# /api/2.0.alpha1/version/{id}/move
-# /api/2.0.alpha1/comment/{id}?render
-# /api/2.0.alpha1/project/{projectKey}/role
-# /api/2.0.alpha1/project/{projectKey}/role/{id}
-# /api/2.0.alpha1/user?username
-# /api/2.0.alpha1/serverInfo
-# /api/2.0.alpha1/component
-# /api/2.0.alpha1/component/{id}?moveIssuesTo
-# /api/2.0.alpha1/component/{id}/relatedIssueCounts
-# /api/2.0.alpha1/search?jql&startAt&maxResults
-# /api/2.0.alpha1/project
-# /api/2.0.alpha1/project/{key}
-# /api/2.0.alpha1/project/{key}/versions
-# /api/2.0.alpha1/project/{key}/components
-# /api/2.0.alpha1/status/{id}
-# /api/2.0.alpha1/issueLinkType
-# /api/2.0.alpha1/issueLinkType/{issueLinkTypeId}
-# /api/2.0.alpha1/customFieldOption/{id}
-# /api/2.0.alpha1/resolution/{id}
-# /api/2.0.alpha1/issueType/{id}
-# /api/2.0.alpha1/attachment/{id}
-# /api/2.0.alpha1/priority/{id}
-# /api/2.0.alpha1/application-properties?key&value
-# /api/2.0.alpha1/worklog/{id}
-# /api/2.0.alpha1/issue/{issueKey}/attachments
+require 'jiraby/project'
 
 module Jiraby
 
@@ -64,7 +24,7 @@ module Jiraby
     #
     # TODO: Handle the case where the wrong API version is used for a given
     # Jira instance (should give 404s when resources are requested)
-    def initialize(url, api_version='2.0.alpha1')
+    def initialize(url, api_version='2')
       if !known_api_versions.include?(api_version)
         raise ArgumentError.new("Unknown Jira API version: #{api_version}")
       end
@@ -128,8 +88,10 @@ module Jiraby
           :content_type => :json, :accept => :json)
       # TODO: Somehow log or otherwise indicate the cause of failure here
       rescue RestClient::Unauthorized => e
+        puts "Unauthorized: #{e.message}"
         return false
       rescue Errno::ECONNREFUSED => e
+        puts "Refused: #{e.message}"
         return false
       end
       if response
@@ -139,7 +101,7 @@ module Jiraby
       else
         @rest_session = nil
       end
-      return !@rest_session.nil?
+      return @rest_session
     end
 
 
@@ -228,29 +190,44 @@ module Jiraby
     end
 
 
-    # Return a hash of issue types for the given project, indexed by the name
-    # of the issue type.
+    # Return the Project with the given key.
     #
-    def issue_types(project_key)
-      not_implemented_in('issue types', '2.0.alpha1')
-      project = project_meta(project_key)
-      return nil if project.nil?
-      # Index by issue type name
-      result = {}
-      project['issuetypes'].each do |issue_type|
-        result[issue_type['name']] = issue_type
+    # @param [String] key
+    #   The project's unique identifier (usually like PROJ)
+    #
+    # @return [Project]
+    #   A Project populated with data returned by the API, or
+    #   nil if no such project is found.
+    #
+    def project(key)
+      json = get("project/#{key}")
+      if json
+        return Jiraby::Project.new(json)
+      else
+        return nil
       end
-      return result
     end
 
 
     # Return the 'createmeta' data for the given project key, or nil if
     # the project is not found.
     #
+    # TODO: Move this into the Project class
+    #
     def project_meta(project_key)
       not_implemented_in('project meta', '2.0.alpha1')
-      meta = get('issue/createmeta')
+      meta = get('issue/createmeta', {'expand' => 'projects.issuetypes.fields'})
       return meta['projects'].find {|proj| proj['key'] == project_key}
+    end
+
+
+    # Return a mapping of all field names (labels) to field IDs
+    def fields
+      result = {}
+      get('field').each do |field|
+        result[field['name']] = field['id']
+      end
+      return result
     end
 
 
@@ -296,18 +273,18 @@ module Jiraby
     end
 
 
-    # Find all issues matching the given JQL query, and return a Generator
-    # that yields each one as an Issue object. Each Issue is fetched from
-    # the REST API as needed.
+    # Find all issues matching the given JQL query, and return an
+    # `Enumerator::Generator` that yields each one as an Issue object.
+    # Each Issue is fetched from the REST API as needed.
     #
     # @param [String] jql
     #   JQL query for the issues you want to match
     #
-    # @return [Generator]
+    # @return [Enumerator::Generator]
     #
     def issues(jql='')
       keys = issue_keys(jql)
-      issue_generator = Generator.new do |g|
+      issue_generator = Enumerator::Generator.new do |g|
         for key in keys
           g.yield issue(key)
         end

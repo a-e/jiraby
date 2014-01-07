@@ -1,6 +1,11 @@
-require 'spec/spec_helper'
+require_relative 'spec_helper'
+require_relative 'data/jira_issues'
 
 describe Jiraby::Jira do
+  before(:each) do
+    @jira = Jiraby::Jira.new('localhost:8080')
+  end
+
   describe '#initialize' do
     it "raises an error for unknown API version" do
       lambda do
@@ -49,19 +54,23 @@ describe Jiraby::Jira do
 
   describe '#login' do
     before(:each) do
-      @jira = Jiraby::Jira.new('localhost:8080', '2')
+      @login_response = {
+        'session' => {
+          'name' => 'JSESSIONID',
+          'value' => '5185C2FF5854BDEADBEEFF3E31449A1E',
+        }
+      }
+      @login_response_json = Yajl::Encoder.encode(@login_response)
     end
 
     it "returns true on successful login" do
+      RestClient.stub(:post).and_return(@login_response_json)
       @jira.login('user', 'user').should be_true
     end
 
-    it "returns false on invalid username" do
+    it "returns false on invalid credentials" do
+      RestClient.stub(:post).and_raise(RestClient::Unauthorized)
       @jira.login('bogus', 'bogus').should be_false
-    end
-
-    it "returns false on invalid password" do
-      @jira.login('user', 'bogus').should be_false
     end
 
     it "returns false when Jira connection can't be made" do
@@ -72,7 +81,6 @@ describe Jiraby::Jira do
 
   describe '#logout' do
     before(:each) do
-      @jira = Jiraby::Jira.new('localhost:8080', '2')
     end
 
     it "returns true on successful logout" do
@@ -92,8 +100,6 @@ describe Jiraby::Jira do
 
   describe '#issue' do
     before(:each) do
-      @jira = Jiraby::Jira.new('localhost:8080', '2')
-      @jira.login('user', 'user')
     end
 
     it "returns an Issue for valid issue key" do
@@ -107,8 +113,6 @@ describe Jiraby::Jira do
 
   describe '#search' do
     before(:each) do
-      @jira = Jiraby::Jira.new('localhost:8080', '2')
-      @jira.login('user', 'user')
     end
 
     it "returns a JSON-style hash of data" do
@@ -127,8 +131,6 @@ describe Jiraby::Jira do
   # TODO: Populate some more test issues in order to properly test this
   describe '#issue_keys' do
     before(:each) do
-      @jira = Jiraby::Jira.new('localhost:8080', '2')
-      @jira.login('user', 'user')
     end
 
     it "returns issue keys matching a JQL query" do
@@ -143,12 +145,18 @@ describe Jiraby::Jira do
   # TODO: Populate some more test issues in order to properly test this
   describe '#issues' do
     before(:each) do
-      @jira = Jiraby::Jira.new('localhost:8080', '2')
-      @jira.login('user', 'user')
+      @jira.stub(:issue_keys => ['TST-1'])
+      @jira.stub(:get).with('issue/TST-1').and_return(JIRA_2_ISSUE)
+      # FIXME: Clean these up
+      @jira.stub(:post).and_return("{}")
+      RestClient.stub(:get).and_return("{}")
+      RestClient.stub(:post).and_return("{}")
+      RestClient.stub(:put).and_return("{}")
     end
 
     it "returns a Generator" do
-      @jira.issues.should be_an_instance_of(Generator)
+      require 'enumerator'
+      @jira.issues.should be_an_instance_of(Enumerator::Generator)
     end
 
     it "yields issues matching a JQL query" do
@@ -163,26 +171,25 @@ describe Jiraby::Jira do
     end
   end
 
-  # TODO: Populate some more test issues in order to properly test this
   describe '#count' do
-    before(:each) do
-      @jira = Jiraby::Jira.new('localhost:8080', '2')
-      @jira.login('user', 'user')
-    end
-
     it "returns the number of issues matching a JQL query" do
-      @jira.count('key = TST-1').should == 1
+      search_results = {'total' => 5}
+      @jira.should_receive(:search).
+        with('key = TST-1', anything, anything).
+        and_return(search_results)
+      @jira.count('key = TST-1').should == 5
     end
 
     it "returns a count of all issues when JQL is empty" do
-      @jira.count('').should == 1
+      search_results = {'total' => 15}
+      @jira.stub(:search).and_return(search_results)
+
+      @jira.count('').should == 15
     end
   end
 
   describe '#project_meta' do
     before(:each) do
-      @jira = Jiraby::Jira.new('localhost:8080', '2')
-      @jira.login('user', 'user')
     end
 
     it "returns the project createmeta info if the project exists" do
@@ -197,8 +204,6 @@ describe Jiraby::Jira do
 
   describe '#issue_types' do
     before(:each) do
-      @jira = Jiraby::Jira.new('localhost:8080', '2')
-      @jira.login('user', 'user')
     end
 
     it "returns the issue types if the project exists" do
@@ -214,8 +219,6 @@ describe Jiraby::Jira do
 
   describe '#get' do
     before(:each) do
-      @jira = Jiraby::Jira.new('localhost:8080', '2')
-      @jira.login('user', 'user')
     end
 
     it "returns JSON data as a Ruby hash" do
@@ -229,8 +232,6 @@ describe Jiraby::Jira do
 
   describe '#post' do
     before(:each) do
-      @jira = Jiraby::Jira.new('localhost:8080', '2')
-      @jira.login('user', 'user')
     end
 
     it "returns JSON data as a Ruby hash"
