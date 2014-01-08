@@ -21,11 +21,21 @@ describe Jiraby::Jira do
       jira.api_version.should == '2.0.alpha1'
     end
 
+    it "accepts URL beginning with http://" do
+      jira = Jiraby::Jira.new('http://jira.example.com')
+      jira.url.should == 'http://jira.example.com'
+    end
+
+    it "accepts URL beginning with https://" do
+      jira = Jiraby::Jira.new('https://jira.example.com')
+      jira.url.should == 'https://jira.example.com'
+    end
+
     it "prepends http:// to the URL if needed" do
       jira = Jiraby::Jira.new('jira.example.com')
       jira.url.should == 'http://jira.example.com'
     end
-  end
+  end #initialize
 
   describe '#auth_url' do
     it "returns the full REST authorization URL" do
@@ -212,7 +222,21 @@ describe Jiraby::Jira do
   end
 
   describe '#project' do
-    it "TODO"
+    before(:each) do
+      @jira.stub(:get).and_return({})
+      @jira.stub(:get).with('project/TST').and_return(json_data('project_TST.json'))
+    end
+
+    it "returns project data" do
+      project = @jira.project('TST')
+      project.should be_a(Jiraby::Project)
+      # TODO: Verify attributes (requires fleshing out Project class)
+    end
+
+    it "returns nil if the project is not found" do
+      project = @jira.project('BOGUS')
+      project.should be_nil
+    end
   end #project
 
   describe '#project_meta' do

@@ -199,7 +199,7 @@ module Jiraby
     #
     def project(key)
       json = get("project/#{key}")
-      if json
+      if json and !json.empty?
         return Jiraby::Project.new(json)
       else
         return nil
