@@ -1,3 +1,6 @@
+require 'simplecov'
+SimpleCov.start if ENV['COVERAGE']
+
 require 'rspec'
 require 'rspec/autorun' # needed for rspec 2.6.x
 require 'yajl'
