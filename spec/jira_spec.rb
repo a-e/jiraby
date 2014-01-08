@@ -254,6 +254,20 @@ describe Jiraby::Jira do
     it "returns nil if the project doesn't exist" do
       @jira.project_meta('BOGUS').should be_nil
     end
+  end #project_meta
+
+  describe '#fields' do
+    before(:each) do
+      @jira.stub(:get).with('field').and_return(json_data('field.json'))
+    end
+
+    it "returns a mapping of field names to IDs" do
+      @jira.fields.should == {
+        "Description" => 'description',
+        "Summary" => 'summary',
+        "My Field" => 'customfield_123',
+      }
+    end
   end
 
   describe '#get' do
@@ -264,7 +278,7 @@ describe Jiraby::Jira do
       response = {'todo' => 'some data'}
       response_json = Yajl::Encoder.encode(response)
       RestClient.stub(:get => response_json)
-      @jira.get('issue/TST-1').should == response
+      @jira.get('some/path').should == response
     end
 
     it "returns nil for unknown subpath" do
@@ -277,7 +291,12 @@ describe Jiraby::Jira do
     before(:each) do
     end
 
-    it "returns JSON data as a Ruby hash"
+    it "returns JSON data as a Ruby hash" do
+      response = {'todo' => 'some data'}
+      response_json = Yajl::Encoder.encode(response)
+      RestClient.stub(:post => response_json)
+      @jira.post('some/path').should == response
+    end
 
     it "returns nil for unknown subpath" do
       RestClient.stub(:post).and_raise(RestClient::ResourceNotFound)
