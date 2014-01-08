@@ -130,7 +130,32 @@ describe Jiraby::Jira do
     it "returns nil for invalid issue key" do
       @jira.issue('BOGUS-429').should be_nil
     end
-  end
+  end #issue
+
+  describe '#create_issue' do
+    before(:each) do
+      @response = {
+        "id" => "10000",
+        "key" => "TST-24",
+        "self" => "http://www.example.com/jira/rest/api/2/issue/10000"
+      }
+      @response_json = Yajl::Encoder.encode(@response)
+    end
+
+    it "sends a POST request to the Jira API" do
+      RestClient.should_receive(:post).and_return(@response_json)
+      @jira.create_issue('TST', 'Bug')
+    end
+
+    it "returns a Jiraby::Issue" do
+      RestClient.stub(:post => @response_json)
+    end
+
+    it "returns nil if the POST request fails" do
+      RestClient.stub(:post).and_raise(RestClient::ResourceNotFound)
+      @jira.create_issue('TST', 'Bug').should be_nil
+    end
+  end #create_issue
 
   describe '#search' do
     before(:each) do

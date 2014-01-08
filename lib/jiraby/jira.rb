@@ -181,7 +181,11 @@ module Jiraby
     # @return [Issue]
     #
     def create_issue(project_key, issue_type='Bug')
-      not_implemented_in('create issue', '2.0.alpha1')
+      issue_data = post(
+        'issue', {"fields" => {"project" => {"id" => project_key} } }
+      )
+      return Jiraby::Issue.new(issue_data) if issue_data
+      return nil
     end
 
 
