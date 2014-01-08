@@ -20,7 +20,7 @@ module Jiraby
     #   Full URL of the JIRA instance to connect to. If this does not begin
     #   with http: or https:, then http:// is assumed.
     # @param [String] api_version
-    #   The API version to use (`"2.0.alpha1"` for Jira 4.x, `"2"` for Jira 5.x)
+    #   The API version to use. For now, only '2' is supported.
     #
     # TODO: Handle the case where the wrong API version is used for a given
     # Jira instance (should give 404s when resources are requested)
@@ -43,7 +43,7 @@ module Jiraby
     # Return a list of known Jira API versions.
     #
     def known_api_versions
-      return ['2.0.alpha1', '2']
+      return ['2']
     end
 
 
@@ -82,6 +82,7 @@ module Jiraby
         :username => username,
         :password => password,
       })
+      @rest_session = nil
       begin
         response = RestClient.post(
           auth_url, request_json,
@@ -91,15 +92,11 @@ module Jiraby
         return false
       rescue Errno::ECONNREFUSED => e
         return false
-      end
-      if response
+      else
         session = Yajl::Parser.parse(response.to_str)['session']
         @rest_session = {session['name'] => session['value']}
-      # TODO: Determine if it's even possible to get here
-      else
-        @rest_session = nil
+        return true
       end
-      return @rest_session
     end
 
 
@@ -213,7 +210,6 @@ module Jiraby
     # TODO: Move this into the Project class
     #
     def project_meta(project_key)
-      not_implemented_in('project meta', '2.0.alpha1')
       meta = get('issue/createmeta', {'expand' => 'projects.issuetypes.fields'})
       return meta['projects'].find {|proj| proj['key'] == project_key}
     end

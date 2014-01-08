@@ -18,22 +18,9 @@ module Jiraby
       @json['fields'].keys
     end
 
-    # Return the field name (label) for the given field
-    # FIXME: Different keys for alpha vs. 2 API
-    def field_name(field)
-      @json['fields'][field]['name']
-    end
-
     # Return the value in the given field.
     def field_value(field_key)
-      field = @json['fields'][field_key]
-      # 2.0.alpha1
-      if field.kind_of?(Hash) && field.has_key?('value')
-        return field['value']
-      # 2.0
-      else
-        return field
-      end
+      return @json['fields'][field_key]
     end
 
     # Allow directly accessing field values as if they were attributes

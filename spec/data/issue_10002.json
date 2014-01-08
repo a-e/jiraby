@@ -3,6 +3,7 @@
   "self": "http://www.example.com/jira/rest/api/2/issue/10002",
   "key": "TST-1",
   "fields": {
+    "description": "example bug report",
     "sub-tasks": [
       {
         "id": "10000",
@@ -46,7 +47,6 @@
       }
     },
     "updated": 1,
-    "description": "example bug report",
     "issuelinks": [
       {
         "id": "10001",

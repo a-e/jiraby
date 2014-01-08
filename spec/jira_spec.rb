@@ -17,8 +17,8 @@ describe Jiraby::Jira do
     end
 
     it "accepts valid API versions" do
-      jira = Jiraby::Jira.new('jira.example.com', '2.0.alpha1')
-      jira.api_version.should == '2.0.alpha1'
+      jira = Jiraby::Jira.new('jira.example.com', '2')
+      jira.api_version.should == '2'
     end
 
     it "accepts URL beginning with http://" do
@@ -53,9 +53,9 @@ describe Jiraby::Jira do
 
   describe '#not_implemented_in' do
     it "raises an exception when API version is one of those listed" do
-      jira = Jiraby::Jira.new('jira.example.com', '2.0.alpha1')
+      jira = Jiraby::Jira.new('jira.example.com', '2')
       lambda do
-        jira.not_implemented_in('Issue creation', '2.0.alpha1')
+        jira.not_implemented_in('Issue creation', '2')
       end.should raise_error
     end
 
