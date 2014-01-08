@@ -4,6 +4,9 @@ require_relative 'data/jira_issues'
 describe Jiraby::Jira do
   before(:each) do
     @jira = Jiraby::Jira.new('localhost:8080')
+    todo_stub = RuntimeError.new("RestClient call needs a stub")
+    RestClient.stub(:get).and_raise(todo_stub)
+    RestClient.stub(:post).and_raise(todo_stub)
   end
 
   describe '#initialize' do
@@ -52,7 +55,7 @@ describe Jiraby::Jira do
     end
   end
 
-  describe '#login' do
+  context "Sessions" do
     before(:each) do
       @login_response = {
         'session' => {
@@ -63,43 +66,51 @@ describe Jiraby::Jira do
       @login_response_json = Yajl::Encoder.encode(@login_response)
     end
 
-    it "returns true on successful login" do
-      RestClient.stub(:post).and_return(@login_response_json)
-      @jira.login('user', 'user').should be_true
-    end
+    describe '#login' do
+      it "returns true on successful login" do
+        RestClient.stub(:post).and_return(@login_response_json)
+        @jira.login('user', 'user').should be_true
+      end
 
-    it "returns false on invalid credentials" do
-      RestClient.stub(:post).and_raise(RestClient::Unauthorized)
-      @jira.login('bogus', 'bogus').should be_false
-    end
+      it "returns false on invalid credentials" do
+        RestClient.stub(:post).and_raise(RestClient::Unauthorized)
+        @jira.login('bogus', 'bogus').should be_false
+      end
 
-    it "returns false when Jira connection can't be made" do
-      jira = Jiraby::Jira.new('localhost:12345', '2')
-      jira.login('user', 'user').should be_false
-    end
-  end
+      it "returns false when Jira connection can't be made" do
+        RestClient.stub(:post).and_raise(Errno::ECONNREFUSED)
+        @jira.login('user', 'user').should be_false
+      end
+    end #login
 
-  describe '#logout' do
-    before(:each) do
-    end
+    describe '#logout' do
+      before(:each) do
+      end
 
-    it "returns true on successful logout" do
-      @jira.login('user', 'user')
-      @jira.logout.should be_true
-    end
+      it "returns true on successful logout" do
+        RestClient.stub(:post).and_return(@login_response_json)
+        @jira.login('user', 'user')
+        RestClient.stub(:delete).and_return('{}')
+        @jira.logout.should be_true
+      end
 
-    it "returns false on failed logout" do
-      @jira.logout.should be_false
-    end
+      it "returns false on failed logout" do
+        RestClient.stub(:delete).and_raise(RestClient::Unauthorized)
+        @jira.logout.should be_false
+      end
 
-    it "returns false when Jira connection can't be made" do
-      jira = Jiraby::Jira.new('localhost:12345', '2')
-      jira.logout.should be_false
-    end
-  end
+      it "returns false when Jira connection can't be made" do
+        RestClient.stub(:delete).and_raise(Errno::ECONNREFUSED)
+        @jira.logout.should be_false
+      end
+    end #logout
+  end # Sessions
 
   describe '#issue' do
     before(:each) do
+      @jira.stub(:get).and_return({})
+      @jira.stub(:get).with('issue/TST-1').
+        and_return(json_data('issue_10002.json'))
     end
 
     it "returns an Issue for valid issue key" do
@@ -113,6 +124,8 @@ describe Jiraby::Jira do
 
   describe '#search' do
     before(:each) do
+      @jira.stub(:post).with('search', anything).
+        and_return(json_data('search_results.json'))
     end
 
     it "returns a JSON-style hash of data" do
@@ -122,8 +135,9 @@ describe Jiraby::Jira do
 
     it "limits results to max_results" do
       [1, 5, 10].each do |max_results|
+        expect_params = {:jql => '', :startAt => 0, :maxResults => max_results}
+        @jira.should_receive(:post).with('search', expect_params)
         json = @jira.search('', 0, max_results)
-        json['issues'].count.should be <= max_results
       end
     end
   end
@@ -133,20 +147,29 @@ describe Jiraby::Jira do
     before(:each) do
     end
 
-    it "returns issue keys matching a JQL query" do
-      @jira.issue_keys('key = TST-1').should == ['TST-1']
+    it "returns a list of issue keys" do
+      search_results = {
+        'total' => 3,
+        'issues' => [
+          {'key' => 'TST-1'},
+          {'key' => 'TST-2'},
+          {'key' => 'TST-3'},
+        ]
+      }
+      @jira.stub(:search).and_return(search_results)
+
+      @jira.issue_keys('project = TEST').should == ['TST-1', 'TST-2', 'TST-3']
     end
 
-    it "returns all issue keys when JQL is empty" do
-      @jira.issue_keys('').should == ['TST-1']
-    end
+    it "combines multiple pages of results into a single list"
   end
 
   # TODO: Populate some more test issues in order to properly test this
   describe '#issues' do
     before(:each) do
       @jira.stub(:issue_keys => ['TST-1'])
-      @jira.stub(:get).with('issue/TST-1').and_return(JIRA_2_ISSUE)
+      @jira.stub(:get).with('issue/TST-1').
+        and_return(json_data('issue_10002.json'))
       # FIXME: Clean these up
       @jira.stub(:post).and_return("{}")
       RestClient.stub(:get).and_return("{}")
@@ -188,32 +211,24 @@ describe Jiraby::Jira do
     end
   end
 
+  describe '#project' do
+    it "TODO"
+  end #project
+
   describe '#project_meta' do
     before(:each) do
+      @jira.stub(:get).with('issue/createmeta', anything).
+        and_return(json_data('issue_createmeta.json'))
     end
 
     it "returns the project createmeta info if the project exists" do
       meta = @jira.project_meta('TST')
-      meta.keys.should == ['name', 'self', 'issuetypes', 'id', 'avatarUrls', 'key']
+      expect_keys = ['name', 'self', 'issuetypes', 'id', 'avatarUrls', 'key']
+      meta.keys.sort.should == expect_keys.sort
     end
 
     it "returns nil if the project doesn't exist" do
       @jira.project_meta('BOGUS').should be_nil
-    end
-  end
-
-  describe '#issue_types' do
-    before(:each) do
-    end
-
-    it "returns the issue types if the project exists" do
-      types = @jira.issue_types('TST')
-      types.should_not be_nil
-      types.keys.should == ["New Feature", "Improvement", "Task", "Sub-task", "Bug"]
-    end
-
-    it "returns nil if the project doesn't exist" do
-      @jira.issue_types('BOGUS').should be_nil
     end
   end
 
@@ -222,10 +237,14 @@ describe Jiraby::Jira do
     end
 
     it "returns JSON data as a Ruby hash" do
-      @jira.get('issue/TST-1').should be_an_instance_of(Hash)
+      response = {'todo' => 'some data'}
+      response_json = Yajl::Encoder.encode(response)
+      RestClient.stub(:get => response_json)
+      @jira.get('issue/TST-1').should == response
     end
 
     it "returns nil for unknown subpath" do
+      RestClient.stub(:get).and_raise(RestClient::ResourceNotFound)
       @jira.get('bogus/subpath').should == nil
     end
   end
@@ -237,6 +256,7 @@ describe Jiraby::Jira do
     it "returns JSON data as a Ruby hash"
 
     it "returns nil for unknown subpath" do
+      RestClient.stub(:post).and_raise(RestClient::ResourceNotFound)
       @jira.post('bogus/subpath').should == nil
     end
   end

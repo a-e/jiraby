@@ -88,10 +88,8 @@ module Jiraby
           :content_type => :json, :accept => :json)
       # TODO: Somehow log or otherwise indicate the cause of failure here
       rescue RestClient::Unauthorized => e
-        puts "Unauthorized: #{e.message}"
         return false
       rescue Errno::ECONNREFUSED => e
-        puts "Refused: #{e.message}"
         return false
       end
       if response
@@ -166,7 +164,7 @@ module Jiraby
     #
     def issue(key)
       json = get("issue/#{key}")
-      if json
+      if json and !json.empty?
         return Jiraby::Issue.new(json)
       else
         return nil

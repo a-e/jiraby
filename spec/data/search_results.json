@@ -1,0 +1,26 @@
+{
+  "expand": "names,schema",
+  "startAt": 0,
+  "maxResults": 50,
+  "total": 3,
+  "issues": [
+    {
+      "key": "TST-1",
+      "id": "1001",
+      "self": "http://www.example.com/jira/rest/api/2/issue/1001",
+      "expand": ""
+    },
+    {
+      "key": "TST-2",
+      "id": "1002",
+      "self": "http://www.example.com/jira/rest/api/2/issue/1002",
+      "expand": ""
+    },
+    {
+      "key": "TST-3",
+      "id": "1003",
+      "self": "http://www.example.com/jira/rest/api/2/issue/1003",
+      "expand": ""
+    }
+  ]
+}

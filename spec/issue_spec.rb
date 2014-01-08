@@ -27,7 +27,7 @@ describe Jiraby::Issue do
 
   describe '#fields' do
     it "returns all field names in the issue" do
-      @issue.fields.should == ['assignee', 'status']
+      @issue.fields.sort.should == ['assignee', 'status'].sort
     end
   end
 
