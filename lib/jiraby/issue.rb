@@ -1,36 +1,11 @@
+require 'hashie'
+
 module Jiraby
-  class Issue
-    attr_reader :json
-
-    # Create an Issue from the given JSON structure,
-    # as returned by the `issue/issueKey` REST API
-    def initialize(json)
-      @json = json
-    end
-
-    # Return the key identifier for this issue
+  class Issue < Hashie::Mash
+    # Work around Hash's builtin `key` method, since Jira issues use `key` for
+    # their ID.
     def key
-      @json['key']
+      return self['key']
     end
-
-    # Return all field names in this issue
-    def fields
-      @json['fields'].keys
-    end
-
-    # Return the value in the given field.
-    def field_value(field_key)
-      return @json['fields'][field_key]
-    end
-
-    # Allow directly accessing field values as if they were attributes
-    def method_missing(meth, *args, &block)
-      if @json['fields'].keys.include?(meth.to_s)
-        return field_value(meth.to_s)
-      else
-        super
-      end
-    end
-
   end
 end
