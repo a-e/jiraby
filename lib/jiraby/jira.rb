@@ -128,6 +128,82 @@ module Jiraby
     end
 
 
+    # Submit a POST request to the given REST subpath, including
+    # the given JSON parameters. If the request succeeds, return
+    # a JSON-formatted response. Otherwise, return nil.
+    #
+    # @param [String] subpath
+    #   The last part of the REST API path you want to post to
+    # @param [Hash] params
+    #   Key => value parameters to post
+    #
+    # @return [Hash]
+    #   Raw JSON response converted to a Ruby Hash, or nil
+    #   if the request failed.
+    #
+    # TODO: Factor this out into a mixin or superclass
+    #
+    def post(subpath, params={})
+      json = Yajl::Encoder.encode(params)
+      begin
+        response = RestClient.post(rest_url(subpath), json, headers)
+      rescue RestClient::ResourceNotFound
+        return nil
+      else
+        return Yajl::Parser.parse(response.to_str)
+      end
+    end
+
+
+    # Submit a GET request to the given REST subpath. If the request succeeds,
+    # return a JSON-formatted response. Otherwise, return nil.
+    #
+    # @param [String] subpath
+    #   The last part of the REST API path you want to post to
+    # @param [Hash] params
+    #   Key => value parameters to include in the request
+    #
+    # @return [Hash, nil]
+    #   Raw JSON response converted to a Ruby Hash, or nil
+    #   if the request failed.
+    #
+    # TODO: Factor this out into a mixin or superclass
+    #
+    def get(subpath, params={})
+      merged_params = headers.merge({:params => params})
+      begin
+        response = RestClient.get(rest_url(subpath), merged_params)
+      rescue RestClient::ResourceNotFound
+        return nil
+      else
+        return Yajl::Parser.parse(response.to_str)
+      end
+    end
+
+
+    # Raise an exception if the current API version is one of those listed.
+    #
+    # @param [String] feature
+    #   Name or short description of the feature in question
+    # @param [Array] api_versions
+    #   One or more version strings for Jira APIs that do not support the
+    #   feature in question
+    #
+    def not_implemented_in(feature, *api_versions)
+      if api_versions.include?(@api_version)
+        raise NotImplementedError,
+          "#{feature} not supported by version #{@api_version} of the Jira API"
+      end
+    end
+
+
+    #
+    #
+    # TODO: Hack out everything below this and move it to higher-level
+    # abstractions. Keep the Jira class low-level.
+    #
+    #
+
     # Invoke the 'search' method to find issues matching the given JQL query,
     # and return the raw JSON response.
     #
@@ -148,7 +224,6 @@ module Jiraby
         }
       )
     end
-
 
     # Return the Issue with the given key.
     #
@@ -290,73 +365,6 @@ module Jiraby
       return issue_generator
     end
 
-
-    # Raise an exception if the current API version is one of those listed.
-    #
-    # @param [String] feature
-    #   Name or short description of the feature in question
-    # @param [Array] api_versions
-    #   One or more version strings for Jira APIs that do not support the
-    #   feature in question
-    #
-    def not_implemented_in(feature, *api_versions)
-      if api_versions.include?(@api_version)
-        raise NotImplementedError,
-          "#{feature} not supported by version #{@api_version} of the Jira API"
-      end
-    end
-
-    # Submit a POST request to the given REST subpath, including
-    # the given JSON parameters. If the request succeeds, return
-    # a JSON-formatted response. Otherwise, return nil.
-    #
-    # @param [String] subpath
-    #   The last part of the REST API path you want to post to
-    # @param [Hash] params
-    #   Key => value parameters to post
-    #
-    # @return [Hash]
-    #   Raw JSON response converted to a Ruby Hash, or nil
-    #   if the request failed.
-    #
-    # TODO: Factor this out into a mixin or superclass
-    #
-    def post(subpath, params={})
-      json = Yajl::Encoder.encode(params)
-      begin
-        response = RestClient.post(rest_url(subpath), json, headers)
-      rescue RestClient::ResourceNotFound
-        return nil
-      else
-        return Yajl::Parser.parse(response.to_str)
-      end
-    end
-
-
-    # Submit a GET request to the given REST subpath. If the request succeeds,
-    # return a JSON-formatted response. Otherwise, return nil.
-    #
-    # @param [String] subpath
-    #   The last part of the REST API path you want to post to
-    # @param [Hash] params
-    #   Key => value parameters to include in the request
-    #
-    # @return [Hash, nil]
-    #   Raw JSON response converted to a Ruby Hash, or nil
-    #   if the request failed.
-    #
-    # TODO: Factor this out into a mixin or superclass
-    #
-    def get(subpath, params={})
-      merged_params = headers.merge({:params => params})
-      begin
-        response = RestClient.get(rest_url(subpath), merged_params)
-      rescue RestClient::ResourceNotFound
-        return nil
-      else
-        return Yajl::Parser.parse(response.to_str)
-      end
-    end
 
   end
 end
