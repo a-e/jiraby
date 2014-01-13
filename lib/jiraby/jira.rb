@@ -35,7 +35,7 @@ module Jiraby
       end
       @api_version = api_version
       @rest_session = nil
-    end
+    end #initialize
 
     attr_reader :url, :api_version
 
@@ -44,14 +44,14 @@ module Jiraby
     #
     def known_api_versions
       return ['2']
-    end
+    end #known_api_versions
 
 
     # Return the URL for authenticating to Jira.
     #
     def auth_url
       "#{@url}/rest/auth/1/session"
-    end
+    end #auth_url
 
 
     # Return the full URL for the given REST API subpath.
@@ -64,7 +64,7 @@ module Jiraby
     #
     def rest_url(subpath)
       "#{@url}/rest/api/#{@api_version}/#{subpath}"
-    end
+    end #rest_url
 
 
     # Login to Jira using the given username/password.
@@ -97,7 +97,7 @@ module Jiraby
         @rest_session = {session['name'] => session['value']}
         return true
       end
-    end
+    end #login
 
 
     # Log out of Jira
@@ -111,7 +111,7 @@ module Jiraby
         return false
       end
       return true
-    end
+    end #logout
 
 
     # Return the headers needed for most REST requests, including
@@ -125,7 +125,7 @@ module Jiraby
         :accept => :json,
         :cookies => @rest_session
       }
-    end
+    end #headers
 
 
     # Submit a POST request to the given REST subpath, including
@@ -152,7 +152,7 @@ module Jiraby
       else
         return Yajl::Parser.parse(response.to_str)
       end
-    end
+    end #post
 
 
     # Submit a GET request to the given REST subpath. If the request succeeds,
@@ -178,7 +178,7 @@ module Jiraby
       else
         return Yajl::Parser.parse(response.to_str)
       end
-    end
+    end #get
 
 
     # Raise an exception if the current API version is one of those listed.
@@ -194,7 +194,7 @@ module Jiraby
         raise NotImplementedError,
           "#{feature} not supported by version #{@api_version} of the Jira API"
       end
-    end
+    end #not_implemented_in
 
 
     #
@@ -223,7 +223,7 @@ module Jiraby
           :maxResults => max_results.to_i,
         }
       )
-    end
+    end #search
 
     # Return the Issue with the given key.
     #
@@ -241,7 +241,7 @@ module Jiraby
       else
         return nil
       end
-    end
+    end #issue
 
 
     # Create a new issue
@@ -261,7 +261,7 @@ module Jiraby
       )
       return Jiraby::Issue.new(issue_data) if issue_data
       return nil
-    end
+    end #create_issue
 
 
     # Return the Project with the given key.
@@ -280,7 +280,7 @@ module Jiraby
       else
         return nil
       end
-    end
+    end #project
 
 
     # Return the 'createmeta' data for the given project key, or nil if
@@ -291,7 +291,7 @@ module Jiraby
     def project_meta(project_key)
       meta = get('issue/createmeta', {'expand' => 'projects.issuetypes.fields'})
       return meta['projects'].find {|proj| proj['key'] == project_key}
-    end
+    end #project_meta
 
 
     # Return a mapping of all field names (labels) to field IDs
@@ -301,7 +301,7 @@ module Jiraby
         result[field['name']] = field['id']
       end
       return result
-    end
+    end #fields
 
 
     # Return the total number of issues matching the given JQL query.
@@ -314,7 +314,7 @@ module Jiraby
     #
     def count(jql='')
       return search(jql, 0, 1)['total']
-    end
+    end #count
 
 
     # Return all of the issue keys matching the given JQL query.
@@ -343,7 +343,7 @@ module Jiraby
       end
 
       return keys
-    end
+    end #issue_keys
 
 
     # Find all issues matching the given JQL query, and return an
@@ -363,8 +363,7 @@ module Jiraby
         end
       end
       return issue_generator
-    end
+    end #issues
 
-
-  end
-end
+  end # class Jira
+end # module Jiraby
