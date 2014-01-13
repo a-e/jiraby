@@ -10,6 +10,7 @@ require 'rest_client'
 require 'jiraby/issue'
 require 'jiraby/project'
 require 'jiraby/exceptions'
+require 'jiraby/rest'
 
 module Jiraby
 
@@ -35,11 +36,11 @@ module Jiraby
         @url = "http://#{url}"
       end
       @api_version = api_version
-      @rest_session = nil
+      @rest = Rest.new("#{@url}/rest/api/#{@api_version}")
     end #initialize
 
     attr_reader :url, :api_version
-
+    attr_accessor :rest
 
     # Return a list of known Jira API versions.
     #
@@ -53,19 +54,6 @@ module Jiraby
     def auth_url
       "#{@url}/rest/auth/1/session"
     end #auth_url
-
-
-    # Return the full URL for the given REST API subpath.
-    #
-    # @param [String] subpath
-    #   The last part of the REST API path
-    #
-    # @return [String]
-    #   The full URL for the given REST API subpath
-    #
-    def rest_url(subpath)
-      "#{@url}/rest/api/#{@api_version}/#{subpath}"
-    end #rest_url
 
 
     # Login to Jira using the given username/password.
@@ -83,7 +71,8 @@ module Jiraby
         :username => username,
         :password => password,
       })
-      @rest_session = nil
+      @rest.session = nil
+      # TODO: Factor this out into Jiraby::Rest methods
       begin
         response = RestClient.post(
           auth_url, request_json,
@@ -95,7 +84,7 @@ module Jiraby
         return false
       else
         session = Yajl::Parser.parse(response.to_str)['session']
-        @rest_session = {session['name'] => session['value']}
+        @rest.session = {session['name'] => session['value']}
         return true
       end
     end #login
@@ -104,7 +93,8 @@ module Jiraby
     # Log out of Jira
     def logout
       begin
-        RestClient.delete(auth_url, headers)
+        # TODO: Wrap in @rest.delete
+        RestClient.delete(auth_url, @rest.headers)
       # TODO: Somehow log or otherwise indicate the cause of failure here
       rescue RestClient::Unauthorized => e
         return false
@@ -114,74 +104,6 @@ module Jiraby
       return true
     end #logout
 
-
-    # Return the headers needed for most REST requests, including
-    # the current session data.
-    #
-    # @return [Hash]
-    #
-    def headers
-      {
-        :content_type => :json,
-        :accept => :json,
-        :cookies => @rest_session
-      }
-    end #headers
-
-
-    # Submit a POST request to the given REST subpath, including
-    # the given JSON parameters. If the request succeeds, return
-    # a JSON-formatted response. Otherwise, raise `Jiraby::RestPostFailed`.
-    #
-    # @param [String] subpath
-    #   The last part of the REST API path you want to post to
-    # @param [Hash] params
-    #   Key => value parameters to post
-    #
-    # @return [Hash]
-    #   Raw JSON response converted to a Ruby Hash, or nil
-    #   if the request failed.
-    #
-    # @raise [Jiraby::RestPostFailed]
-    #
-    # TODO: Factor this out into a mixin or superclass
-    #
-    def post(subpath, params={})
-      json = Yajl::Encoder.encode(params)
-      begin
-        response = RestClient.post(rest_url(subpath), json, headers)
-      rescue RestClient::ResourceNotFound => ex
-        raise Jiraby::RestPostFailed.new(ex.message)
-      else
-        return Yajl::Parser.parse(response.to_str)
-      end
-    end #post
-
-
-    # Submit a GET request to the given REST subpath. If the request succeeds,
-    # return a JSON-formatted response. Otherwise, return nil.
-    #
-    # @param [String] subpath
-    #   The last part of the REST API path you want to post to
-    # @param [Hash] params
-    #   Key => value parameters to include in the request
-    #
-    # @return [Hash, nil]
-    #   Raw JSON response converted to a Ruby Hash, or nil
-    #   if the request failed.
-    #
-    # TODO: Factor this out into a mixin or superclass
-    #
-    def get(subpath, params={})
-      merged_params = headers.merge({:params => params})
-      begin
-        response = RestClient.get(rest_url(subpath), merged_params)
-      rescue RestClient::ResourceNotFound => ex
-        raise Jiraby::RestGetFailed.new(ex.message)
-      else
-        return Yajl::Parser.parse(response.to_str)
-      end
-    end #get
 
 
     # Raise an exception if the current API version is one of those listed.
@@ -218,7 +140,7 @@ module Jiraby
     #   Maximum number of issues to return
     #
     def search(jql, start_at=0, max_results=50)
-      return post(
+      return @rest.post(
         'search',
         {
           :jql => jql,
@@ -238,11 +160,11 @@ module Jiraby
     #   nil if no such issue is found.
     #
     def issue(key)
-      json = get("issue/#{key}")
+      json = @rest.get("issue/#{key}")
       if json and !json.empty?
-        return Jiraby::Issue.new(json)
+        return Issue.new(json)
       else
-        raise Jiraby::IssueNotFound.new("Issue '#{key}' not found in Jira")
+        raise IssueNotFound.new("Issue '#{key}' not found in Jira")
       end
     end #issue
 
@@ -259,10 +181,10 @@ module Jiraby
     # @return [Issue]
     #
     def create_issue(project_key, issue_type='Bug')
-      issue_data = post(
+      issue_data = @rest.post(
         'issue', {"fields" => {"project" => {"id" => project_key} } }
       )
-      return Jiraby::Issue.new(issue_data) if issue_data
+      return Issue.new(issue_data) if issue_data
       return nil
     end #create_issue
 
@@ -277,11 +199,11 @@ module Jiraby
     #   nil if no such project is found.
     #
     def project(key)
-      json = get("project/#{key}")
-      if json and !json.empty?
-        return Jiraby::Project.new(json)
+      project = @rest.get("project/#{key}")
+      if project and !project.empty?
+        return Project.new(project)
       else
-        raise Jiraby::ProjectNotFound.new("Project '#{key}' not found in Jira")
+        raise ProjectNotFound.new("Project '#{key}' not found in Jira")
       end
     end #project
 
@@ -292,12 +214,12 @@ module Jiraby
     # TODO: Move this into the Project class
     #
     def project_meta(project_key)
-      meta = get('issue/createmeta', {'expand' => 'projects.issuetypes.fields'})
+      meta = @rest.get('issue/createmeta', {'expand' => 'projects.issuetypes.fields'})
       metadata = meta['projects'].find {|proj| proj['key'] == project_key}
       if metadata and !metadata.nil?
         return metadata
       else
-        raise Jiraby::ProjectNotFound.new("Project '#{project_key}' not found in Jira")
+        raise ProjectNotFound.new("Project '#{project_key}' not found in Jira")
       end
     end #project_meta
 
@@ -305,7 +227,7 @@ module Jiraby
     # Return a mapping of all field names (labels) to field IDs
     def fields
       result = {}
-      get('field').each do |field|
+      @rest.get('field').each do |field|
         result[field['name']] = field['id']
       end
       return result

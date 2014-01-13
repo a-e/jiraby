@@ -42,14 +42,7 @@ describe Jiraby::Jira do
       jira = Jiraby::Jira.new('jira.example.com')
       jira.auth_url.should == 'http://jira.example.com/rest/auth/1/session'
     end
-  end
-
-  describe '#rest_url' do
-    it "returns the full REST URL with API version and subpath" do
-      jira = Jiraby::Jira.new('jira.example.com', '2')
-      jira.rest_url('issue').should == 'http://jira.example.com/rest/api/2/issue'
-    end
-  end
+  end #auth_url
 
   describe '#not_implemented_in' do
     it "raises an exception when API version is one of those listed" do
@@ -63,7 +56,7 @@ describe Jiraby::Jira do
       jira = Jiraby::Jira.new('jira.example.com', '2')
       jira.not_implemented_in('Issue creation', '2.0.alpha1').should be_nil
     end
-  end
+  end #not_implemented_in
 
   context "Sessions" do
     before(:each) do
@@ -118,8 +111,8 @@ describe Jiraby::Jira do
 
   describe '#issue' do
     before(:each) do
-      @jira.stub(:get).and_return({})
-      @jira.stub(:get).with('issue/TST-1').
+      @jira.rest.stub(:get).and_return({})
+      @jira.rest.stub(:get).with('issue/TST-1').
         and_return(json_data('issue_10002.json'))
     end
 
@@ -163,7 +156,7 @@ describe Jiraby::Jira do
 
   describe '#search' do
     before(:each) do
-      @jira.stub(:post).with('search', anything).
+      @jira.rest.stub(:post).with('search', anything).
         and_return(json_data('search_results.json'))
     end
 
@@ -175,11 +168,11 @@ describe Jiraby::Jira do
     it "limits results to max_results" do
       [1, 5, 10].each do |max_results|
         expect_params = {:jql => '', :startAt => 0, :maxResults => max_results}
-        @jira.should_receive(:post).with('search', expect_params)
+        @jira.rest.should_receive(:post).with('search', expect_params)
         json = @jira.search('', 0, max_results)
       end
     end
-  end
+  end #search
 
   # TODO: Populate some more test issues in order to properly test this
   describe '#issue_keys' do
@@ -201,16 +194,16 @@ describe Jiraby::Jira do
     end
 
     it "combines multiple pages of results into a single list"
-  end
+  end #issue_keys
 
   # TODO: Populate some more test issues in order to properly test this
   describe '#issues' do
     before(:each) do
       @jira.stub(:issue_keys => ['TST-1'])
-      @jira.stub(:get).with('issue/TST-1').
+      @jira.rest.stub(:get).with('issue/TST-1').
         and_return(json_data('issue_10002.json'))
       # FIXME: Clean these up
-      @jira.stub(:post).and_return("{}")
+      @jira.rest.stub(:post).and_return("{}")
       RestClient.stub(:get).and_return("{}")
       RestClient.stub(:post).and_return("{}")
       RestClient.stub(:put).and_return("{}")
@@ -231,7 +224,7 @@ describe Jiraby::Jira do
       keys = @jira.issues('').collect {|i| i.key}
       keys.should == ['TST-1']
     end
-  end
+  end #issues
 
   describe '#count' do
     it "returns the number of issues matching a JQL query" do
@@ -248,12 +241,12 @@ describe Jiraby::Jira do
 
       @jira.count('').should == 15
     end
-  end
+  end #count
 
   describe '#project' do
     before(:each) do
-      @jira.stub(:get).and_return({})
-      @jira.stub(:get).with('project/TST').and_return(json_data('project_TST.json'))
+      @jira.rest.stub(:get).and_return({})
+      @jira.rest.stub(:get).with('project/TST').and_return(json_data('project_TST.json'))
     end
 
     it "returns project data" do
@@ -271,7 +264,7 @@ describe Jiraby::Jira do
 
   describe '#project_meta' do
     before(:each) do
-      @jira.stub(:get).with('issue/createmeta', anything).
+      @jira.rest.stub(:get).with('issue/createmeta', anything).
         and_return(json_data('issue_createmeta.json'))
     end
 
@@ -291,7 +284,7 @@ describe Jiraby::Jira do
 
   describe '#fields' do
     before(:each) do
-      @jira.stub(:get).with('field').and_return(json_data('field.json'))
+      @jira.rest.stub(:get).with('field').and_return(json_data('field.json'))
     end
 
     it "returns a mapping of field names to IDs" do
@@ -301,44 +294,7 @@ describe Jiraby::Jira do
         "My Field" => 'customfield_123',
       }
     end
-  end
+  end #fields
 
-  describe '#get' do
-    before(:each) do
-    end
-
-    it "returns JSON data as a Ruby hash" do
-      response = {'todo' => 'some data'}
-      response_json = Yajl::Encoder.encode(response)
-      RestClient.stub(:get => response_json)
-      @jira.get('some/path').should == response
-    end
-
-    it "raises RestGetFailed for unknown subpath" do
-      RestClient.stub(:get).and_raise(RestClient::ResourceNotFound)
-      lambda do
-        @jira.get('bogus/subpath').should == nil
-      end.should raise_error(Jiraby::RestGetFailed, /Resource Not Found/)
-    end
-  end
-
-  describe '#post' do
-    before(:each) do
-    end
-
-    it "returns JSON data as a Ruby hash" do
-      response = {'todo' => 'some data'}
-      response_json = Yajl::Encoder.encode(response)
-      RestClient.stub(:post => response_json)
-      @jira.post('some/path').should == response
-    end
-
-    it "raises RestPostFailed for unknown subpath" do
-      RestClient.stub(:post).and_raise(RestClient::ResourceNotFound)
-      lambda do
-        @jira.post('bogus/subpath')
-      end.should raise_error(Jiraby::RestPostFailed, /Resource Not Found/)
-    end
-  end
 end
 
