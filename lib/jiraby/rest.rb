@@ -26,12 +26,30 @@ module Jiraby
     end #headers
 
 
-    # Submit a POST request to the given REST subpath, including
+    # Return the full REST API URL for the given path.
+    #
+    # @param [String] path
+    #   Path relative to `base_url`. If this is a full URL beginning with
+    #   `http://` or `https://`, it's returned as-is.
+    #
+    # @return [String]
+    #
+    def url(path)
+      if path =~ /^https?:\/\//
+        return path
+      else
+        return File.join(@base_url, path)
+      end
+    end #url
+
+
+    # Submit a POST request to the given REST path, including
     # the given JSON parameters. If the request succeeds, return
     # a JSON-formatted response. Otherwise, raise `Jiraby::RestPostFailed`.
     #
-    # @param [String] subpath
-    #   The last part of the REST API path you want to post to
+    # @param [String] path
+    #   The last part of the REST API path you want to POST to,
+    #   or a full URL beginning with `http://` or `https://`
     # @param [Hash] params
     #   Key => value parameters to post
     #
@@ -41,10 +59,8 @@ module Jiraby
     #
     # @raise [Jiraby::RestPostFailed]
     #
-    # TODO: Factor this out into a mixin or superclass
-    #
-    def post(subpath, params={})
-      url = File.join(@base_url, subpath)
+    def post(path, params={})
+      url = self.url(path)
       json = Yajl::Encoder.encode(params)
       begin
         response = RestClient.post(url, json, self.headers)
@@ -56,11 +72,12 @@ module Jiraby
     end #post
 
 
-    # Submit a GET request to the given REST subpath. If the request succeeds,
+    # Submit a GET request to the given REST path. If the request succeeds,
     # return a JSON-formatted response. Otherwise, return nil.
     #
-    # @param [String] subpath
-    #   The last part of the REST API path you want to post to
+    # @param [String] path
+    #   The last part of the REST API path you want to GET from,
+    #   or a full URL beginning with `http://` or `https://`
     # @param [Hash] params
     #   Key => value parameters to include in the request
     #
@@ -68,10 +85,8 @@ module Jiraby
     #   Raw JSON response converted to a Ruby Hash, or nil
     #   if the request failed.
     #
-    # TODO: Factor this out into a mixin or superclass
-    #
-    def get(subpath, params={})
-      url = File.join(@base_url, subpath)
+    def get(path, params={})
+      url = self.url(path)
       merged_params = self.headers.merge({:params => params})
       begin
         response = RestClient.get(url, merged_params)
