@@ -52,11 +52,11 @@ describe Jiraby::Rest do
       @rest.get('some/path').should == response
     end
 
-    it "raises RestGetFailed for unknown path" do
+    it "raises RestCallFailed for unknown path" do
       RestClient.stub(:get).and_raise(RestClient::ResourceNotFound)
       lambda do
         @rest.get('bogus/path').should == nil
-      end.should raise_error(Jiraby::RestGetFailed, /Resource Not Found/)
+      end.should raise_error(Jiraby::RestCallFailed, /Resource Not Found/)
     end
   end #get
 
@@ -71,11 +71,11 @@ describe Jiraby::Rest do
       @rest.post('some/path').should == response
     end
 
-    it "raises RestPostFailed for unknown path" do
+    it "raises RestCallFailed for unknown path" do
       RestClient.stub(:post).and_raise(RestClient::ResourceNotFound)
       lambda do
         @rest.post('bogus/path')
-      end.should raise_error(Jiraby::RestPostFailed, /Resource Not Found/)
+      end.should raise_error(Jiraby::RestCallFailed, /Resource Not Found/)
     end
   end #post
 

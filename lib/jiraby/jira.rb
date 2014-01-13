@@ -67,23 +67,18 @@ module Jiraby
     #   `true` if login was successful, `false` otherwise
     #
     def login(username, password)
-      request_json = Yajl::Encoder.encode({
-        :username => username,
-        :password => password,
-      })
       @rest.session = nil
       # TODO: Factor this out into Jiraby::Rest methods
       begin
-        response = RestClient.post(
-          auth_url, request_json,
-          :content_type => :json, :accept => :json)
+        response = @rest.post(
+          auth_url, :username => username, :password => password)
       # TODO: Somehow log or otherwise indicate the cause of failure here
       rescue RestClient::Unauthorized => e
         return false
       rescue Errno::ECONNREFUSED => e
         return false
       else
-        session = Yajl::Parser.parse(response.to_str)['session']
+        session = response['session']
         @rest.session = {session['name'] => session['value']}
         return true
       end
@@ -93,8 +88,7 @@ module Jiraby
     # Log out of Jira
     def logout
       begin
-        # TODO: Wrap in @rest.delete
-        RestClient.delete(auth_url, @rest.headers)
+        @rest.delete(auth_url)
       # TODO: Somehow log or otherwise indicate the cause of failure here
       rescue RestClient::Unauthorized => e
         return false
@@ -211,7 +205,7 @@ module Jiraby
     # Return the 'createmeta' data for the given project key, or nil if
     # the project is not found.
     #
-    # TODO: Move this into the Project class
+    # TODO: Move this into the Project class?
     #
     def project_meta(project_key)
       meta = @rest.get('issue/createmeta', {'expand' => 'projects.issuetypes.fields'})

@@ -146,11 +146,11 @@ describe Jiraby::Jira do
       RestClient.stub(:post => @response_json)
     end
 
-    it "raises RestPostFailed if the POST request fails" do
+    it "raises RestCallFailed if the POST request fails" do
       RestClient.stub(:post).and_raise(RestClient::ResourceNotFound)
       lambda do
         @jira.create_issue('TST', 'Bug')
-      end.should raise_error(Jiraby::RestPostFailed, /Resource Not Found/)
+      end.should raise_error(Jiraby::RestCallFailed, /Resource Not Found/)
     end
   end #create_issue
 

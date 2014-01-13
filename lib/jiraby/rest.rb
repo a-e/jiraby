@@ -1,3 +1,4 @@
+require 'hashie'
 
 module Jiraby
   # REST API wrapper
@@ -45,7 +46,7 @@ module Jiraby
 
     # Submit a POST request to the given REST path, including
     # the given JSON parameters. If the request succeeds, return
-    # a JSON-formatted response. Otherwise, raise `Jiraby::RestPostFailed`.
+    # a JSON-formatted response. Otherwise, raise `Jiraby::RestCallFailed`.
     #
     # @param [String] path
     #   The last part of the REST API path you want to POST to,
@@ -54,10 +55,9 @@ module Jiraby
     #   Key => value parameters to post
     #
     # @return [Hash]
-    #   Raw JSON response converted to a Ruby Hash, or nil
-    #   if the request failed.
+    #   Raw JSON response converted to a Ruby Hash
     #
-    # @raise [Jiraby::RestPostFailed]
+    # @raise [Jiraby::RestCallFailed]
     #
     def post(path, params={})
       url = self.url(path)
@@ -65,15 +65,31 @@ module Jiraby
       begin
         response = RestClient.post(url, json, self.headers)
       rescue RestClient::ResourceNotFound => ex
-        raise Jiraby::RestPostFailed.new(ex.message)
+        raise Jiraby::RestCallFailed.new(ex.message)
       else
+        # TODO: Exception handling
         return Yajl::Parser.parse(response.to_str)
       end
     end #post
 
 
+    # Submit a DELETE request to the given REST path. If the request succeeds,
+    # return a JSON-formatted response. Otherwise, raise `Jiraby::RestCallFailed`.
+    def delete(path, params={})
+      url = self.url(path)
+      json = Yajl::Encoder.encode(params)
+      begin
+        response = RestClient.delete(url, json, self.headers)
+      rescue RestClient::ResourceNotFound => ex
+        raise Jiraby::RestCallFailed.new(ex.message)
+      else
+        return Yajl::Parser.parse(response.to_str)
+      end
+    end
+
+
     # Submit a GET request to the given REST path. If the request succeeds,
-    # return a JSON-formatted response. Otherwise, return nil.
+    # return a JSON-formatted response. Otherwise, raise `Jiraby::RestCallFailed`.
     #
     # @param [String] path
     #   The last part of the REST API path you want to GET from,
@@ -85,14 +101,18 @@ module Jiraby
     #   Raw JSON response converted to a Ruby Hash, or nil
     #   if the request failed.
     #
+    # @raise [Jiraby::RestCallFailed]
+    #   If the request failed
+    #
     def get(path, params={})
       url = self.url(path)
       merged_params = self.headers.merge({:params => params})
       begin
         response = RestClient.get(url, merged_params)
       rescue RestClient::ResourceNotFound => ex
-        raise Jiraby::RestGetFailed.new(ex.message)
+        raise Jiraby::RestCallFailed.new(ex.message)
       else
+        # TODO: Exception handling
         return Yajl::Parser.parse(response.to_str)
       end
     end #get
