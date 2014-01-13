@@ -9,6 +9,7 @@ require 'rest_client'
 # Local
 require 'jiraby/issue'
 require 'jiraby/project'
+require 'jiraby/exceptions'
 
 module Jiraby
 
@@ -130,7 +131,7 @@ module Jiraby
 
     # Submit a POST request to the given REST subpath, including
     # the given JSON parameters. If the request succeeds, return
-    # a JSON-formatted response. Otherwise, return nil.
+    # a JSON-formatted response. Otherwise, raise `Jiraby::RestPostFailed`.
     #
     # @param [String] subpath
     #   The last part of the REST API path you want to post to
@@ -141,14 +142,16 @@ module Jiraby
     #   Raw JSON response converted to a Ruby Hash, or nil
     #   if the request failed.
     #
+    # @raise [Jiraby::RestPostFailed]
+    #
     # TODO: Factor this out into a mixin or superclass
     #
     def post(subpath, params={})
       json = Yajl::Encoder.encode(params)
       begin
         response = RestClient.post(rest_url(subpath), json, headers)
-      rescue RestClient::ResourceNotFound
-        return nil
+      rescue RestClient::ResourceNotFound => ex
+        raise Jiraby::RestPostFailed.new(ex.message)
       else
         return Yajl::Parser.parse(response.to_str)
       end
@@ -173,8 +176,8 @@ module Jiraby
       merged_params = headers.merge({:params => params})
       begin
         response = RestClient.get(rest_url(subpath), merged_params)
-      rescue RestClient::ResourceNotFound
-        return nil
+      rescue RestClient::ResourceNotFound => ex
+        raise Jiraby::RestGetFailed.new(ex.message)
       else
         return Yajl::Parser.parse(response.to_str)
       end
@@ -239,7 +242,7 @@ module Jiraby
       if json and !json.empty?
         return Jiraby::Issue.new(json)
       else
-        return nil
+        raise Jiraby::IssueNotFound.new("Issue '#{key}' not found in Jira")
       end
     end #issue
 
@@ -278,7 +281,7 @@ module Jiraby
       if json and !json.empty?
         return Jiraby::Project.new(json)
       else
-        return nil
+        raise Jiraby::ProjectNotFound.new("Project '#{key}' not found in Jira")
       end
     end #project
 
@@ -290,7 +293,12 @@ module Jiraby
     #
     def project_meta(project_key)
       meta = get('issue/createmeta', {'expand' => 'projects.issuetypes.fields'})
-      return meta['projects'].find {|proj| proj['key'] == project_key}
+      metadata = meta['projects'].find {|proj| proj['key'] == project_key}
+      if metadata and !metadata.nil?
+        return metadata
+      else
+        raise Jiraby::ProjectNotFound.new("Project '#{project_key}' not found in Jira")
+      end
     end #project_meta
 
 

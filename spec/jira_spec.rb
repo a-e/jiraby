@@ -127,8 +127,10 @@ describe Jiraby::Jira do
       @jira.issue('TST-1').should be_an_instance_of(Jiraby::Issue)
     end
 
-    it "returns nil for invalid issue key" do
-      @jira.issue('BOGUS-429').should be_nil
+    it "raises IssueNotFound for invalid issue key" do
+      lambda do
+        @jira.issue('BOGUS-429')
+      end.should raise_error(Jiraby::IssueNotFound, /Issue 'BOGUS-429' not found/)
     end
   end #issue
 
@@ -151,9 +153,11 @@ describe Jiraby::Jira do
       RestClient.stub(:post => @response_json)
     end
 
-    it "returns nil if the POST request fails" do
+    it "raises RestPostFailed if the POST request fails" do
       RestClient.stub(:post).and_raise(RestClient::ResourceNotFound)
-      @jira.create_issue('TST', 'Bug').should be_nil
+      lambda do
+        @jira.create_issue('TST', 'Bug')
+      end.should raise_error(Jiraby::RestPostFailed, /Resource Not Found/)
     end
   end #create_issue
 
@@ -258,9 +262,10 @@ describe Jiraby::Jira do
       # TODO: Verify attributes (requires fleshing out Project class)
     end
 
-    it "returns nil if the project is not found" do
-      project = @jira.project('BOGUS')
-      project.should be_nil
+    it "raises ProjectNotFound if the project is not found" do
+      lambda do
+        @jira.project('BOGUS')
+      end.should raise_error(Jiraby::ProjectNotFound, /Project 'BOGUS' not found/)
     end
   end #project
 
@@ -276,8 +281,11 @@ describe Jiraby::Jira do
       meta.keys.sort.should == expect_keys.sort
     end
 
-    it "returns nil if the project doesn't exist" do
-      @jira.project_meta('BOGUS').should be_nil
+    it "raises ProjectNotFound if the project doesn't exist" do
+      RestClient.stub(:get).and_raise(RestClient::ResourceNotFound)
+      lambda do
+        @jira.project_meta('BOGUS')
+      end.should raise_error(Jiraby::ProjectNotFound, /Project 'BOGUS' not found/)
     end
   end #project_meta
 
@@ -306,9 +314,11 @@ describe Jiraby::Jira do
       @jira.get('some/path').should == response
     end
 
-    it "returns nil for unknown subpath" do
+    it "raises RestGetFailed for unknown subpath" do
       RestClient.stub(:get).and_raise(RestClient::ResourceNotFound)
-      @jira.get('bogus/subpath').should == nil
+      lambda do
+        @jira.get('bogus/subpath').should == nil
+      end.should raise_error(Jiraby::RestGetFailed, /Resource Not Found/)
     end
   end
 
@@ -323,9 +333,11 @@ describe Jiraby::Jira do
       @jira.post('some/path').should == response
     end
 
-    it "returns nil for unknown subpath" do
+    it "raises RestPostFailed for unknown subpath" do
       RestClient.stub(:post).and_raise(RestClient::ResourceNotFound)
-      @jira.post('bogus/subpath').should == nil
+      lambda do
+        @jira.post('bogus/subpath')
+      end.should raise_error(Jiraby::RestPostFailed, /Resource Not Found/)
     end
   end
 end
