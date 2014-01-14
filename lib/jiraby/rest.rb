@@ -44,6 +44,9 @@ module Jiraby
     end #url
 
 
+    # TODO: Refactor these; the JSON encoding and parsing, and exception
+    # handling, are common to get/put/post/delete
+
     # Submit a POST request to the given REST path, including
     # the given JSON parameters. If the request succeeds, return
     # a JSON-formatted response. Otherwise, raise `Jiraby::RestCallFailed`.
@@ -64,13 +67,43 @@ module Jiraby
       json = Yajl::Encoder.encode(params)
       begin
         response = RestClient.post(url, json, self.headers)
-      rescue RestClient::ResourceNotFound => ex
+      rescue => ex
         raise Jiraby::RestCallFailed.new("Failed to POST #{url}: " + ex.message)
+        #return ex
       else
         # TODO: Exception handling
         return Yajl::Parser.parse(response.to_str)
       end
     end #post
+
+
+    # Submit a PUT request to the given REST path, including
+    # the given JSON parameters. If the request succeeds, return
+    # a JSON-formatted response. Otherwise, raise `Jiraby::RestCallFailed`.
+    #
+    # @param [String] path
+    #   The last part of the REST API path you want to PUT to,
+    #   or a full URL beginning with `http://` or `https://`
+    # @param [Hash] params
+    #   Key => value parameters to put
+    #
+    # @return [Hash]
+    #   Raw JSON response converted to a Ruby Hash
+    #
+    # @raise [Jiraby::RestCallFailed]
+    #
+    def put(path, params={})
+      url = self.url(path)
+      json = Yajl::Encoder.encode(params)
+      begin
+        response = RestClient.put(url, json, self.headers)
+      rescue => ex
+        raise Jiraby::RestCallFailed.new("Failed to PUT #{url}: " + ex.message)
+        #return ex
+      else
+        return Yajl::Parser.parse(response.to_str)
+      end
+    end #put
 
 
     # Submit a DELETE request to the given REST path. If the request succeeds,
@@ -80,8 +113,9 @@ module Jiraby
       json = Yajl::Encoder.encode(params)
       begin
         response = RestClient.delete(url, json, self.headers)
-      rescue RestClient::ResourceNotFound => ex
+      rescue => ex
         raise Jiraby::RestCallFailed.new("Failed to DELETE #{url}: " + ex.message)
+        #return ex
       else
         return Yajl::Parser.parse(response.to_str)
       end
@@ -109,13 +143,17 @@ module Jiraby
       merged_params = self.headers.merge({:params => params})
       begin
         response = RestClient.get(url, merged_params)
-      rescue RestClient::ResourceNotFound => ex
+      rescue => ex
         raise Jiraby::RestCallFailed.new("Failed to GET #{url}: " + ex.message)
+        #return ex
       else
         # TODO: Exception handling
         return Yajl::Parser.parse(response.to_str)
       end
     end #get
+
+    def request(method, *args)
+    end
 
   end # class Rest
 end # module Jiraby

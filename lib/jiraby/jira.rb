@@ -13,7 +13,18 @@ require 'jiraby/exceptions'
 require 'jiraby/rest'
 
 module Jiraby
-
+  # Wrapper for Jira
+  #
+  # Usage:
+  #
+  #     jira = Jiraby::Jira.new("localhost:8080")
+  #     jira.login('admin', 'password')
+  #
+  # Then:
+  #
+  #     jira.rest.get('issue/TST-1')
+  #     ...
+  #
   class Jira
     # Initialize a Jira instance at the given URL.
     # Call {#login} separately to log into Jira.
@@ -73,9 +84,7 @@ module Jiraby
         response = @rest.post(
           auth_url, :username => username, :password => password)
       # TODO: Somehow log or otherwise indicate the cause of failure here
-      rescue RestClient::Unauthorized => e
-        return false
-      rescue Errno::ECONNREFUSED => e
+      rescue Jiraby::RestCallFailed
         return false
       else
         session = response['session']
@@ -90,12 +99,12 @@ module Jiraby
       begin
         @rest.delete(auth_url)
       # TODO: Somehow log or otherwise indicate the cause of failure here
-      rescue RestClient::Unauthorized => e
+      rescue Jiraby::RestCallFailed
         return false
-      rescue Errno::ECONNREFUSED => e
-        return false
+      else
+        @rest.session = nil
+        return true
       end
-      return true
     end #logout
 
 
