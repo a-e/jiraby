@@ -65,7 +65,7 @@ module Jiraby
       begin
         response = RestClient.post(url, json, self.headers)
       rescue RestClient::ResourceNotFound => ex
-        raise Jiraby::RestCallFailed.new(ex.message)
+        raise Jiraby::RestCallFailed.new("Failed to POST #{url}: " + ex.message)
       else
         # TODO: Exception handling
         return Yajl::Parser.parse(response.to_str)
@@ -81,7 +81,7 @@ module Jiraby
       begin
         response = RestClient.delete(url, json, self.headers)
       rescue RestClient::ResourceNotFound => ex
-        raise Jiraby::RestCallFailed.new(ex.message)
+        raise Jiraby::RestCallFailed.new("Failed to DELETE #{url}: " + ex.message)
       else
         return Yajl::Parser.parse(response.to_str)
       end
@@ -110,7 +110,7 @@ module Jiraby
       begin
         response = RestClient.get(url, merged_params)
       rescue RestClient::ResourceNotFound => ex
-        raise Jiraby::RestCallFailed.new(ex.message)
+        raise Jiraby::RestCallFailed.new("Failed to GET #{url}: " + ex.message)
       else
         # TODO: Exception handling
         return Yajl::Parser.parse(response.to_str)
