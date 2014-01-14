@@ -85,7 +85,7 @@ module Jiraby
       else
         return Yajl::Parser.parse(response.to_str)
       end
-    end
+    end #delete
 
 
     # Submit a GET request to the given REST path. If the request succeeds,
@@ -116,8 +116,6 @@ module Jiraby
         return Yajl::Parser.parse(response.to_str)
       end
     end #get
-
-
 
   end # class Rest
 end # module Jiraby

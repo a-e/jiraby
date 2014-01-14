@@ -8,6 +8,7 @@ describe Jiraby::Rest do
     todo_stub = RuntimeError.new("RestClient call needs a stub")
     RestClient.stub(:get).and_raise(todo_stub)
     RestClient.stub(:post).and_raise(todo_stub)
+    RestClient.stub(:delete).and_raise(todo_stub)
   end
 
   describe '#headers' do
@@ -42,7 +43,9 @@ describe Jiraby::Rest do
 
 
   describe '#get' do
-    before(:each) do
+    it "sends a REST GET request with the given params" do
+      RestClient.should_receive(:get).and_return('{}')
+      @rest.get('some/path', :foo => :bar)
     end
 
     it "returns JSON data as a Ruby hash" do
@@ -61,7 +64,9 @@ describe Jiraby::Rest do
   end #get
 
   describe '#post' do
-    before(:each) do
+    it "sends a REST POST request with the given params" do
+      RestClient.should_receive(:post).and_return('{}')
+      @rest.post('some/path', :foo => :bar)
     end
 
     it "returns JSON data as a Ruby hash" do
@@ -79,4 +84,24 @@ describe Jiraby::Rest do
     end
   end #post
 
+  describe '#delete' do
+    it "sends a REST DELETE request with the given params" do
+      RestClient.should_receive(:delete).and_return('{}')
+      @rest.delete('some/path', :foo => :bar)
+    end
+
+    it "returns JSON data as a Ruby hash" do
+      response = {'todo' => 'some data'}
+      response_json = Yajl::Encoder.encode(response)
+      RestClient.stub(:delete => response_json)
+      @rest.delete('some/path').should == response
+    end
+
+    it "raises RestCallFailed for unknown path" do
+      RestClient.stub(:delete).and_raise(RestClient::ResourceNotFound)
+      lambda do
+        @rest.delete('bogus/path')
+      end.should raise_error(Jiraby::RestCallFailed, /Resource Not Found/)
+    end
+  end
 end # describe Jiraby::Rest
