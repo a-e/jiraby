@@ -1,5 +1,5 @@
 require 'jiraby/jira'
-require 'jiraby/resource'
+require 'jiraby/json_resource'
 require 'jiraby/issue'
 require 'jiraby/project'
 require 'jiraby/exceptions'

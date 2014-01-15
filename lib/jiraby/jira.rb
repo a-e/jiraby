@@ -10,7 +10,8 @@ require 'rest_client'
 require 'jiraby/issue'
 require 'jiraby/project'
 require 'jiraby/exceptions'
-require 'jiraby/rest'
+#require 'jiraby/rest'
+require 'jiraby/json_resource'
 
 module Jiraby
   # Wrapper for Jira
@@ -47,11 +48,13 @@ module Jiraby
         @url = "http://#{url}"
       end
       @api_version = api_version
-      @rest = Rest.new("#{@url}/rest/api/#{@api_version}")
+      @auth_resource = Jiraby::JSONResource.new(auth_url)
+      @resource = Jiraby::JSONResource.new(base_url)
     end #initialize
 
     attr_reader :url, :api_version
-    attr_accessor :rest
+    attr_reader :resource
+    #attr_accessor :rest
 
     # Return a list of known Jira API versions.
     #
@@ -66,6 +69,9 @@ module Jiraby
       "#{@url}/rest/auth/1/session"
     end #auth_url
 
+    def base_url
+      "#{@url}/rest/api/#{@api_version}"
+    end
 
     # Login to Jira using the given username/password.
     #
@@ -78,17 +84,19 @@ module Jiraby
     #   `true` if login was successful, `false` otherwise
     #
     def login(username, password)
-      @rest.session = nil
+      credentials = {:username => username, :password => password}
       # TODO: Factor this out into Jiraby::Rest methods
       begin
-        response = @rest.post(
-          auth_url, :username => username, :password => password)
+        response = @auth_resource.post credentials
       # TODO: Somehow log or otherwise indicate the cause of failure here
       rescue Jiraby::RestCallFailed
         return false
       else
-        session = response['session']
-        @rest.session = {session['name'] => session['value']}
+        puts "Got login response: #{response}"
+        session = {response['session']['name'] => response['session']['value']}
+        @resource = JSONResource.new(
+          base_url, :headers => {:cookies => session}
+        )
         return true
       end
     end #login
@@ -97,12 +105,12 @@ module Jiraby
     # Log out of Jira
     def logout
       begin
-        @rest.delete(auth_url)
+        @auth_resource.delete
       # TODO: Somehow log or otherwise indicate the cause of failure here
       rescue Jiraby::RestCallFailed
         return false
       else
-        @rest.session = nil
+        @resource = Jiraby::JSONResource.new(base_url)
         return true
       end
     end #logout
@@ -143,8 +151,7 @@ module Jiraby
     #   Maximum number of issues to return
     #
     def search(jql, start_at=0, max_results=50)
-      return @rest.post(
-        'search',
+      return @resource['search'].post(
         {
           :jql => jql,
           :startAt => start_at.to_i,
@@ -163,7 +170,7 @@ module Jiraby
     #   nil if no such issue is found.
     #
     def issue(key)
-      json = @rest.get("issue/#{key}")
+      json = @resource["issue/#{key}"].get
       if json and !json.empty?
         return Issue.new(json)
       else
@@ -184,8 +191,8 @@ module Jiraby
     # @return [Issue]
     #
     def create_issue(project_key, issue_type='Bug')
-      issue_data = @rest.post(
-        'issue', {"fields" => {"project" => {"id" => project_key} } }
+      issue_data = @resource['issue'].post(
+        {"fields" => {"project" => {"id" => project_key} } }
       )
       return Issue.new(issue_data) if issue_data
       return nil
@@ -202,7 +209,7 @@ module Jiraby
     #   nil if no such project is found.
     #
     def project(key)
-      project = @rest.get("project/#{key}")
+      project = @resource["project/#{key}"].get
       if project and !project.empty?
         return Project.new(project)
       else
@@ -217,7 +224,7 @@ module Jiraby
     # TODO: Move this into the Project class?
     #
     def project_meta(project_key)
-      meta = @rest.get('issue/createmeta', {'expand' => 'projects.issuetypes.fields'})
+      meta = @resource['issue/createmeta'].get({'expand' => 'projects.issuetypes.fields'})
       metadata = meta['projects'].find {|proj| proj['key'] == project_key}
       if metadata and !metadata.nil?
         return metadata
@@ -230,7 +237,7 @@ module Jiraby
     # Return a mapping of all field names (labels) to field IDs
     def fields
       result = {}
-      @rest.get('field').each do |field|
+      @resource['field'].get.each do |field|
         result[field['name']] = field['id']
       end
       return result

@@ -111,8 +111,8 @@ describe Jiraby::Jira do
 
   describe '#issue' do
     before(:each) do
-      @jira.rest.stub(:get).and_return({})
-      @jira.rest.stub(:get).with('issue/TST-1').
+      @jira.resource.stub(:get).and_return({})
+      @jira.resource.stub(:get).with('issue/TST-1').
         and_return(json_data('issue_10002.json'))
     end
 
@@ -138,7 +138,7 @@ describe Jiraby::Jira do
     end
 
     it "sends a POST request to the Jira API" do
-      RestClient.should_receive(:post).and_return(@response_json)
+      @jira.resource.should_receive(:post).and_return(@response_json)
       @jira.create_issue('TST', 'Bug')
     end
 
@@ -156,7 +156,7 @@ describe Jiraby::Jira do
 
   describe '#search' do
     before(:each) do
-      @jira.rest.stub(:post).with('search', anything).
+      @jira.resource.stub(:post).with('search', anything).
         and_return(json_data('search_results.json'))
     end
 
@@ -168,7 +168,7 @@ describe Jiraby::Jira do
     it "limits results to max_results" do
       [1, 5, 10].each do |max_results|
         expect_params = {:jql => '', :startAt => 0, :maxResults => max_results}
-        @jira.rest.should_receive(:post).with('search', expect_params)
+        @jira.resource.should_receive(:post).with('search', expect_params)
         json = @jira.search('', 0, max_results)
       end
     end
@@ -200,13 +200,13 @@ describe Jiraby::Jira do
   describe '#issues' do
     before(:each) do
       @jira.stub(:issue_keys => ['TST-1'])
-      @jira.rest.stub(:get).with('issue/TST-1').
+      @jira.resource.stub(:get).with('issue/TST-1').
         and_return(json_data('issue_10002.json'))
       # FIXME: Clean these up
-      @jira.rest.stub(:post).and_return("{}")
-      RestClient.stub(:get).and_return("{}")
-      RestClient.stub(:post).and_return("{}")
-      RestClient.stub(:put).and_return("{}")
+      @jira.resource.stub(:post).and_return({})
+      RestClient.stub(:get).and_return({})
+      RestClient.stub(:post).and_return({})
+      RestClient.stub(:put).and_return({})
     end
 
     it "returns a Generator" do
@@ -245,8 +245,8 @@ describe Jiraby::Jira do
 
   describe '#project' do
     before(:each) do
-      @jira.rest.stub(:get).and_return({})
-      @jira.rest.stub(:get).with('project/TST').and_return(json_data('project_TST.json'))
+      @jira.resource.stub(:get).and_return({})
+      @jira.resource.stub(:get).with('project/TST').and_return(json_data('project_TST.json'))
     end
 
     it "returns project data" do
@@ -264,7 +264,7 @@ describe Jiraby::Jira do
 
   describe '#project_meta' do
     before(:each) do
-      @jira.rest.stub(:get).with('issue/createmeta', anything).
+      @jira.resource.stub(:get).with('issue/createmeta', anything).
         and_return(json_data('issue_createmeta.json'))
     end
 
@@ -284,7 +284,7 @@ describe Jiraby::Jira do
 
   describe '#fields' do
     before(:each) do
-      @jira.rest.stub(:get).with('field').and_return(json_data('field.json'))
+      @jira.resource.stub(:get).with('field').and_return(json_data('field.json'))
     end
 
     it "returns a mapping of field names to IDs" do
