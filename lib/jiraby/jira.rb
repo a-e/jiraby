@@ -53,8 +53,7 @@ module Jiraby
     end #initialize
 
     attr_reader :url, :api_version
-    attr_reader :resource, :auth_resource
-    #attr_accessor :rest
+    attr_reader :rest, :auth
 
     # Return a list of known Jira API versions.
     #
@@ -89,14 +88,21 @@ module Jiraby
       begin
         response = @auth.post credentials
       # TODO: Somehow log or otherwise indicate the cause of failure here
-      rescue Jiraby::RestCallFailed
+      rescue RestClient::Exception
+        return false
+      rescue Errno::ECONNREFUSED
         return false
       else
-        session = {response['session']['name'] => response['session']['value']}
-        @rest = JSONResource.new(
-          base_url, :headers => {:cookies => session}
-        )
-        return true
+        if response['session']
+          session = {response['session']['name'] => response['session']['value']}
+          @rest = JSONResource.new(
+            base_url, :headers => {:cookies => session}
+          )
+          return true
+        # TODO: Somehow log or otherwise indicate the cause of failure here
+        else
+          return false
+        end
       end
     end #login
 
@@ -106,7 +112,9 @@ module Jiraby
       begin
         @auth.delete
       # TODO: Somehow log or otherwise indicate the cause of failure here
-      rescue Jiraby::RestCallFailed
+      rescue RestClient::Exception
+        return false
+      rescue Errno::ECONNREFUSED
         return false
       else
         @rest = Jiraby::JSONResource.new(base_url)
@@ -165,15 +173,17 @@ module Jiraby
     #   The issue's unique identifier (usually like PROJ-NNN)
     #
     # @return [Issue]
-    #   An Issue populated with data returned by the API, or
-    #   nil if no such issue is found.
+    #   An Issue populated with data returned by the API
+    #
+    # @raise [IssueNotFound]
+    #   If the issue was not found or fetching failed
     #
     def issue(key)
       json = @rest["issue/#{key}"].get
-      if json and !json.empty?
-        return Issue.new(json)
-      else
+      if json and (json.empty? or json['errorMessages'])
         raise IssueNotFound.new("Issue '#{key}' not found in Jira")
+      else
+        return Issue.new(json)
       end
     end #issue
 
@@ -208,11 +218,11 @@ module Jiraby
     #   nil if no such project is found.
     #
     def project(key)
-      project = @rest["project/#{key}"].get
-      if project and !project.empty?
-        return Project.new(project)
-      else
+      json = @rest["project/#{key}"].get
+      if json and (json.empty? or json['errorMessages'])
         raise ProjectNotFound.new("Project '#{key}' not found in Jira")
+      else
+        return Project.new(json)
       end
     end #project
 

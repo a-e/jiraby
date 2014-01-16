@@ -3,10 +3,10 @@ require_relative 'data/jira_issues'
 
 describe Jiraby::Jira do
   before(:each) do
-    @jira = Jiraby::Jira.new('localhost:8080')
+    @jira = Jiraby::Jira.new('localhost:9292')
     todo_stub = RuntimeError.new("RestClient call needs a stub")
-    RestClient.stub(:get).and_raise(todo_stub)
-    RestClient.stub(:post).and_raise(todo_stub)
+    #RestClient.stub(:get).and_raise(todo_stub)
+    #RestClient.stub(:post).and_raise(todo_stub)
   end
 
   describe '#initialize' do
@@ -59,30 +59,13 @@ describe Jiraby::Jira do
   end #not_implemented_in
 
   context "Sessions" do
-    before(:each) do
-      @login_response = {
-        'session' => {
-          'name' => 'JSESSIONID',
-          'value' => '5185C2FF5854BDEADBEEFF3E31449A1E',
-        }
-      }
-      @login_response_json = Yajl::Encoder.encode(@login_response)
-    end
-
     describe '#login' do
       it "returns true on successful login" do
-        RestClient.stub(:post).and_return(@login_response_json)
-        @jira.login('user', 'user').should be_true
+        @jira.login('user', 'password').should be_true
       end
 
       it "returns false on invalid credentials" do
-        RestClient.stub(:post).and_raise(RestClient::Unauthorized)
-        @jira.login('bogus', 'bogus').should be_false
-      end
-
-      it "returns false when Jira connection can't be made" do
-        RestClient.stub(:post).and_raise(Errno::ECONNREFUSED)
-        @jira.login('user', 'user').should be_false
+        @jira.login('user', 'badpassword').should be_false
       end
     end #login
 
@@ -91,31 +74,27 @@ describe Jiraby::Jira do
       end
 
       it "returns true on successful logout" do
-        RestClient.stub(:post).and_return(@login_response_json)
+        #RestClient.stub(:post).and_return(@login_response_json)
         @jira.login('user', 'user')
-        RestClient.stub(:delete).and_return('{}')
+        #RestClient.stub(:delete).and_return('{}')
+        @jira.auth.stub(:delete).and_return('{}')
         @jira.logout.should be_true
       end
 
       it "returns false on failed logout" do
-        RestClient.stub(:delete).and_raise(RestClient::Unauthorized)
+        @jira.auth.stub(:delete).and_raise(RestClient::Unauthorized)
         @jira.logout.should be_false
       end
 
       it "returns false when Jira connection can't be made" do
-        RestClient.stub(:delete).and_raise(Errno::ECONNREFUSED)
+        #RestClient.stub(:delete).and_raise(Errno::ECONNREFUSED)
+        @jira.auth.stub(:delete).and_raise(Errno::ECONNREFUSED)
         @jira.logout.should be_false
       end
     end #logout
   end # Sessions
 
   describe '#issue' do
-    before(:each) do
-      @jira.resource.stub(:get).and_return({})
-      @jira.resource.stub(:get).with('issue/TST-1').
-        and_return(json_data('issue_10002.json'))
-    end
-
     it "returns an Issue for valid issue key" do
       @jira.issue('TST-1').should be_an_instance_of(Jiraby::Issue)
     end
@@ -138,26 +117,19 @@ describe Jiraby::Jira do
     end
 
     it "sends a POST request to the Jira API" do
-      @jira.resource.should_receive(:post).and_return(@response_json)
+      #@jira.resource.should_receive(:post).and_return(@response_json)
       @jira.create_issue('TST', 'Bug')
     end
 
     it "returns a Jiraby::Issue" do
       RestClient.stub(:post => @response_json)
     end
-
-    it "raises RestCallFailed if the POST request fails" do
-      RestClient.stub(:post).and_raise(RestClient::ResourceNotFound)
-      lambda do
-        @jira.create_issue('TST', 'Bug')
-      end.should raise_error(Jiraby::RestCallFailed, /Resource Not Found/)
-    end
   end #create_issue
 
   describe '#search' do
     before(:each) do
-      @jira.resource.stub(:post).with('search', anything).
-        and_return(json_data('search_results.json'))
+      #@jira.resource.stub(:post).with('search', anything).
+        #and_return(json_data('search_results.json'))
     end
 
     it "returns a JSON-style hash of data" do
@@ -168,7 +140,7 @@ describe Jiraby::Jira do
     it "limits results to max_results" do
       [1, 5, 10].each do |max_results|
         expect_params = {:jql => '', :startAt => 0, :maxResults => max_results}
-        @jira.resource.should_receive(:post).with('search', expect_params)
+        #@jira.resource.should_receive(:post).with('search', expect_params)
         json = @jira.search('', 0, max_results)
       end
     end
@@ -247,8 +219,8 @@ describe Jiraby::Jira do
 
   describe '#project' do
     before(:each) do
-      @jira.resource.stub(:get).and_return({})
-      @jira.resource.stub(:get).with('project/TST').and_return(json_data('project_TST.json'))
+      #@jira.resource.stub(:get).and_return({})
+      #@jira.resource.stub(:get).with('project/TST').and_return(json_data('project_TST.json'))
     end
 
     it "returns project data" do
@@ -266,8 +238,8 @@ describe Jiraby::Jira do
 
   describe '#project_meta' do
     before(:each) do
-      @jira.resource.stub(:get).with('issue/createmeta', anything).
-        and_return(json_data('issue_createmeta.json'))
+      #@jira.resource.stub(:get).with('issue/createmeta', anything).
+        #and_return(json_data('issue_createmeta.json'))
     end
 
     it "returns the project createmeta info if the project exists" do
@@ -285,10 +257,6 @@ describe Jiraby::Jira do
   end #project_meta
 
   describe '#fields' do
-    before(:each) do
-      @jira.resource.stub(:get).with('field').and_return(json_data('field.json'))
-    end
-
     it "returns a mapping of field names to IDs" do
       @jira.fields.should == {
         "Description" => 'description',

@@ -58,7 +58,6 @@ module Jiraby
     end
 
     def post(payload, additional_headers={}, &block)
-      puts "JSONResource#post( #{payload.inspect} )"
       wrap_with_payload(:_post, payload, additional_headers, &block)
     end
 
