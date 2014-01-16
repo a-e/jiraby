@@ -30,6 +30,12 @@ module Jiraby
   #   is parsed as JSON and returned as a Hash; no exception is raised.
   #
   class JSONResource < RestClient::Resource
+    def initialize(url, options={}, backwards_compatibility=nil, &block)
+      options[:headers] = {} if options[:headers].nil?
+      options[:headers].merge!(:content_type => :json, :accept => :json)
+      super(url, options, backwards_compatibility, &block)
+    end
+
     # Aliases to RestClient::Resource methods
     alias_method :_get, :get
     alias_method :_delete, :delete
@@ -64,19 +70,11 @@ module Jiraby
       wrap_with_payload(:_patch, payload, additional_headers, &block)
     end
 
-    def default_headers
-      {
-        :content_type => :json,
-        :accept => :json
-      }
-    end
-
     # Wrap the given method to return a Hash response parsed from JSON
     #
     def wrap(method, additional_headers={}, &block)
-      headers = default_headers.merge(additional_headers)
       response = maybe_error_response do
-        send(method, headers, &block)
+        send(method, additional_headers, &block)
       end
       return parsed_response(response)
     end
@@ -85,12 +83,11 @@ module Jiraby
     # parsed from JSON.
     #
     def wrap_with_payload(method, payload, additional_headers={}, &block)
-      headers = default_headers.merge(additional_headers)
       if payload.is_a?(Hash)
         payload = Yajl::Encoder.encode(payload)
       end
       response = maybe_error_response do
-        send(method, payload, headers, &block)
+        send(method, payload, additional_headers, &block)
       end
       return parsed_response(response)
     end

@@ -199,14 +199,15 @@ describe Jiraby::Jira do
   # TODO: Populate some more test issues in order to properly test this
   describe '#issues' do
     before(:each) do
-      @jira.stub(:issue_keys => ['TST-1'])
-      @jira.resource.stub(:get).with('issue/TST-1').
-        and_return(json_data('issue_10002.json'))
+      @jira.stub(:issue_keys => ['TST-1', 'TST-2', 'TST-3'])
+      @jira.stub(:issue => Jiraby::Issue.new)
+      #@jira.resource.stub(:get).with('issue/TST-1').
+        #and_return(json_data('issue_10002.json'))
       # FIXME: Clean these up
-      @jira.resource.stub(:post).and_return({})
-      RestClient.stub(:get).and_return({})
-      RestClient.stub(:post).and_return({})
-      RestClient.stub(:put).and_return({})
+      #@jira.resource.stub(:post).and_return({})
+      #RestClient.stub(:get).and_return({})
+      #RestClient.stub(:post).and_return({})
+      #RestClient.stub(:put).and_return({})
     end
 
     it "returns a Generator" do
@@ -214,15 +215,16 @@ describe Jiraby::Jira do
       @jira.issues.should be_an_instance_of(Enumerator::Generator)
     end
 
-    it "yields issues matching a JQL query" do
-      @jira.issues('key = TST-1').each do |issue|
-        issue.key.should == 'TST-1'
+    it "yields one Issue instance for each issue key" do
+      @jira.issues.each do |issue|
+        issue.should be_a(Jiraby::Issue)
       end
     end
 
-    it "yields all issues when JQL is empty" do
-      keys = @jira.issues('').collect {|i| i.key}
-      keys.should == ['TST-1']
+    it "uses #issue_keys to find issues matching a JQL query" do
+      jql = "key = TST-1"
+      @jira.should_receive(:issue_keys).with(jql).and_return([])
+      @jira.issues(jql)
     end
   end #issues
 

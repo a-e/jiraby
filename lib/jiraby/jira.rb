@@ -48,12 +48,12 @@ module Jiraby
         @url = "http://#{url}"
       end
       @api_version = api_version
-      @auth_resource = Jiraby::JSONResource.new(auth_url)
-      @resource = Jiraby::JSONResource.new(base_url)
+      @auth = Jiraby::JSONResource.new(auth_url)
+      @rest = Jiraby::JSONResource.new(base_url)
     end #initialize
 
     attr_reader :url, :api_version
-    attr_reader :resource
+    attr_reader :resource, :auth_resource
     #attr_accessor :rest
 
     # Return a list of known Jira API versions.
@@ -87,14 +87,13 @@ module Jiraby
       credentials = {:username => username, :password => password}
       # TODO: Factor this out into Jiraby::Rest methods
       begin
-        response = @auth_resource.post credentials
+        response = @auth.post credentials
       # TODO: Somehow log or otherwise indicate the cause of failure here
       rescue Jiraby::RestCallFailed
         return false
       else
-        puts "Got login response: #{response}"
         session = {response['session']['name'] => response['session']['value']}
-        @resource = JSONResource.new(
+        @rest = JSONResource.new(
           base_url, :headers => {:cookies => session}
         )
         return true
@@ -105,12 +104,12 @@ module Jiraby
     # Log out of Jira
     def logout
       begin
-        @auth_resource.delete
+        @auth.delete
       # TODO: Somehow log or otherwise indicate the cause of failure here
       rescue Jiraby::RestCallFailed
         return false
       else
-        @resource = Jiraby::JSONResource.new(base_url)
+        @rest = Jiraby::JSONResource.new(base_url)
         return true
       end
     end #logout
@@ -151,7 +150,7 @@ module Jiraby
     #   Maximum number of issues to return
     #
     def search(jql, start_at=0, max_results=50)
-      return @resource['search'].post(
+      return @rest['search'].post(
         {
           :jql => jql,
           :startAt => start_at.to_i,
@@ -170,7 +169,7 @@ module Jiraby
     #   nil if no such issue is found.
     #
     def issue(key)
-      json = @resource["issue/#{key}"].get
+      json = @rest["issue/#{key}"].get
       if json and !json.empty?
         return Issue.new(json)
       else
@@ -191,7 +190,7 @@ module Jiraby
     # @return [Issue]
     #
     def create_issue(project_key, issue_type='Bug')
-      issue_data = @resource['issue'].post(
+      issue_data = @rest['issue'].post(
         {"fields" => {"project" => {"id" => project_key} } }
       )
       return Issue.new(issue_data) if issue_data
@@ -209,7 +208,7 @@ module Jiraby
     #   nil if no such project is found.
     #
     def project(key)
-      project = @resource["project/#{key}"].get
+      project = @rest["project/#{key}"].get
       if project and !project.empty?
         return Project.new(project)
       else
@@ -224,7 +223,7 @@ module Jiraby
     # TODO: Move this into the Project class?
     #
     def project_meta(project_key)
-      meta = @resource['issue/createmeta'].get({'expand' => 'projects.issuetypes.fields'})
+      meta = @rest['issue/createmeta'].get({'expand' => 'projects.issuetypes.fields'})
       metadata = meta['projects'].find {|proj| proj['key'] == project_key}
       if metadata and !metadata.nil?
         return metadata
@@ -237,7 +236,7 @@ module Jiraby
     # Return a mapping of all field names (labels) to field IDs
     def fields
       result = {}
-      @resource['field'].get.each do |field|
+      @rest['field'].get.each do |field|
         result[field['name']] = field['id']
       end
       return result
