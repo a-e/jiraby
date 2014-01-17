@@ -1,6 +1,5 @@
 require_relative 'spec_helper'
 require 'jiraby/jira'
-require 'jiraby/rest'
 require 'jiraby/json_resource'
 
 describe Jiraby::JSONResource do

@@ -3,8 +3,8 @@ require 'rspec/core/rake_task'
 
 desc "Run spec tests"
 RSpec::Core::RakeTask.new(:spec) do |t|
-    t.pattern = 'spec/**/*_spec.rb'
-      t.rspec_opts = ['--color', '--format doc']
+  t.pattern = 'spec/**/*_spec.rb'
+    t.rspec_opts = ['--color', '--format doc']
 end
 
 desc "Start a pry session with the given Jira host"

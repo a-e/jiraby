@@ -10,7 +10,6 @@ require 'rest_client'
 require 'jiraby/issue'
 require 'jiraby/project'
 require 'jiraby/exceptions'
-#require 'jiraby/rest'
 require 'jiraby/json_resource'
 
 module Jiraby
