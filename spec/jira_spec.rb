@@ -64,8 +64,20 @@ describe Jiraby::Jira do
         @jira.login('user', 'password').should be_true
       end
 
-      it "returns false on invalid credentials" do
-        @jira.login('user', 'badpassword').should be_false
+      context "returns false" do
+        it "when given invalid credentials" do
+          @jira.login('user', 'badpassword').should be_false
+        end
+
+        it "when RestClient::Exception occurs" do
+          @jira.auth.stub(:post).and_raise(RestClient::Exception)
+          @jira.login('user', 'password').should be_false
+        end
+
+        it "when Errno::ECONNREFUSED occurs" do
+          @jira.auth.stub(:post).and_raise(Errno::ECONNREFUSED)
+          @jira.login('user', 'password').should be_false
+        end
       end
     end #login
 

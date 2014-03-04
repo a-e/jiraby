@@ -18,6 +18,11 @@ describe Jiraby::JSONResource do
   end #[]
 
   describe "#get" do
+    it "invokes #wrap with :_head" do
+      @jr.should_receive(:wrap).with(:_get, {})
+      @jr.get({})
+    end
+
     it "raises JSONParseError when parsing fails" do
       lambda do
         @jr.parsed_response('bogus json')
@@ -26,23 +31,38 @@ describe Jiraby::JSONResource do
   end #get
 
   describe "#delete" do
-    it "TODO"
+    it "invokes #wrap with :_delete" do
+      @jr.should_receive(:wrap).with(:_delete, {})
+      @jr.delete({})
+    end
   end #delete
 
   describe "#head" do
-    it "TODO"
+    it "invokes #wrap with :_head" do
+      @jr.should_receive(:wrap).with(:_head, {})
+      @jr.head({})
+    end
   end #head
 
   describe "#post" do
-    it "TODO"
+    it "invokes #wrap_with_payload with :_post" do
+      @jr.should_receive(:wrap_with_payload).with(:_post, {}, {})
+      @jr.post({}, {})
+    end
   end #post
 
   describe "#put" do
-    it "TODO"
+    it "invokes #wrap_with_payload with :_put" do
+      @jr.should_receive(:wrap_with_payload).with(:_put, {}, {})
+      @jr.put({}, {})
+    end
   end #put
 
   describe "#patch" do
-    it "TODO"
+    it "invokes #wrap_with_payload with :_patch" do
+      @jr.should_receive(:wrap_with_payload).with(:_patch, {}, {})
+      @jr.patch({}, {})
+    end
   end #patch
 
   describe "#wrap" do
