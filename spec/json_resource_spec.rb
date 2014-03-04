@@ -18,7 +18,11 @@ describe Jiraby::JSONResource do
   end #[]
 
   describe "#get" do
-    it "TODO"
+    it "raises JSONParseError when parsing fails" do
+      lambda do
+        @jr.parsed_response('bogus json')
+      end.should raise_error(Jiraby::JSONParseError)
+    end
   end #get
 
   describe "#delete" do
@@ -42,11 +46,77 @@ describe Jiraby::JSONResource do
   end #patch
 
   describe "#wrap" do
-    it "TODO"
+    before(:each) do
+      @headers = {}
+    end
+
+    it "invokes a REST method with additional headers and block" do
+      @jr.should_receive(:_get).with(@headers).and_return('{}')
+      @jr.wrap(:_get, @headers)
+    end
+
+    it "returns the parsed JSON response as a hash" do
+      response_hash = {"status" => "ok"}
+      @jr.should_receive(:_get).
+        with(@headers).
+        and_return(response_hash.to_json)
+      result = @jr.wrap(:_get, @headers)
+      result.should == response_hash
+    end
+
+    it "when RestClient::Exception occurs, returns exception response as a hash" do
+      error_hash = {"error" => "Error message"}
+      exception = RestClient::Exception.new
+      exception.response = error_hash.to_json
+      got_response = @jr.wrap(:_get, {}) do
+        raise exception
+      end
+      got_response.should == error_hash
+    end
   end #wrap
 
   describe "#wrap_with_payload" do
-    it "TODO"
+    before(:each) do
+      @payload = {"name" => "Foo"}
+      @headers = {}
+    end
+
+    it "when payload is a hash, it's encoded as JSON" do
+      @jr.should_receive(:_put).with(@payload.to_json, @headers).and_return('{}')
+      @jr.wrap_with_payload(:_put, @payload, @headers)
+    end
+
+    it "when payload is already a JSON string, it's sent as-is" do
+      json_payload = @payload.to_json
+      @jr.should_receive(:_put).with(json_payload, @headers).and_return('{}')
+      @jr.wrap_with_payload(:_put, json_payload, @headers)
+    end
+
+    it "invokes a REST method with additional headers and block" do
+      @headers['extra'] = 'something'
+      @jr.should_receive(:_put).with(@payload.to_json, @headers).and_return('{}')
+      @jr.wrap_with_payload(:_put, @payload, @headers)
+    end
+
+    it "returns the parsed JSON response as a hash" do
+      json_payload = @payload.to_json
+      response_hash = {"status" => "ok"}
+      @jr.should_receive(:_put).
+        with(json_payload, @headers).
+        and_return(response_hash.to_json)
+      result = @jr.wrap_with_payload(:_put, json_payload, @headers)
+      result.should == response_hash
+    end
+
+    it "when RestClient::Exception occurs, returns exception response as a hash" do
+      error_hash = {"error" => "Error message"}
+      exception = RestClient::Exception.new
+      exception.response = error_hash.to_json
+      got_response = @jr.wrap_with_payload(:_put, {}, {}) do
+        raise exception
+      end
+      got_response.should == error_hash
+    end
   end #wrap_with_payload
 
   describe "#parsed_response" do
