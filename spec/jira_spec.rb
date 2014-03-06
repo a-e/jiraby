@@ -139,11 +139,6 @@ describe Jiraby::Jira do
   end #create_issue
 
   describe '#search' do
-    before(:each) do
-      #@jira.resource.stub(:post).with('search', anything).
-        #and_return(json_data('search_results.json'))
-    end
-
     it "returns an array of Issue instances" do
       issues = @jira.search('', 0, 1)
       issues.should be_an(Array)
@@ -155,7 +150,6 @@ describe Jiraby::Jira do
     it "limits results to max_results" do
       [1, 5, 10].each do |max_results|
         expect_params = {:jql => '', :startAt => 0, :maxResults => max_results}
-        #@jira.resource.should_receive(:post).with('search', expect_params)
         json = @jira.search('', 0, max_results)
       end
     end
