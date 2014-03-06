@@ -22,7 +22,7 @@ module Jiraby
   #
   # Then:
   #
-  #     jira.rest.get('issue/TST-1')
+  #     jira.rest['issue/TST-1'].get
   #     ...
   #
   class Jira
@@ -182,7 +182,7 @@ module Jiraby
       if json and (json.empty? or json['errorMessages'])
         raise IssueNotFound.new("Issue '#{key}' not found in Jira")
       else
-        return Issue.new(json)
+        return Issue.from_json(@rest, json)
       end
     end #issue
 
@@ -200,9 +200,9 @@ module Jiraby
     #
     def create_issue(project_key, issue_type='Bug')
       issue_data = @rest['issue'].post(
-        {"fields" => {"project" => {"id" => project_key} } }
+        {"fields" => {"project" => {"key" => project_key} } }
       )
-      return Issue.new(issue_data) if issue_data
+      return Issue.from_json(@rest, issue_data) if issue_data
       return nil
     end #create_issue
 

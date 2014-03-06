@@ -1,7 +1,8 @@
 require 'hashie'
+require 'jiraby/entity'
 
 module Jiraby
-  class Project < Hashie::Mash
+  class Project < Entity
     # Return a hash of issue types for the project, indexed by the name of the
     # issue type.
     #
