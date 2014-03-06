@@ -103,10 +103,12 @@ module Jiraby
       else
         if json.is_a?(Hash)
           return Entity.new(json)
-        else # Array
+        elsif json.is_a?(Array)
           return json.collect do |hash|
             Entity.new(hash)
           end
+        else
+          return nil
         end
       end
     end

@@ -134,7 +134,7 @@ describe Jiraby::JSONResource do
   end #wrap_with_payload
 
   describe "#parsed_response" do
-    it "parses the response and returns a Hash" do
+    it "returns a Hash if the response is a JSON object" do
       hash = {
         'foo' => 'bar',
         'nested' => {
@@ -144,6 +144,16 @@ describe Jiraby::JSONResource do
       }
       json = Yajl::Encoder.encode(hash)
       @jr.parsed_response(json).should == hash
+    end
+
+    it "returns an Array of Hashes if the response is a JSON object array" do
+      hash_array = [{'foo' => 'bar'}, {'goo' => 'car'}]
+      json = Yajl::Encoder.encode(hash_array)
+      @jr.parsed_response(json).should == hash_array
+    end
+
+    it "returns nil if the response is an empty string" do
+      @jr.parsed_response("").should be_nil
     end
 
     it "raises JSONParseError when parsing fails" do
