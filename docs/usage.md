@@ -17,7 +17,15 @@ Using Jiraby from the Ruby console:
     > jira.login('username', 'password')
     > jira.logout
 
-Accessing REST methods:
+Methods in the [JIRA REST API](https://docs.atlassian.com/jira/REST/6.2/) can be
+accessed like so:
+
+    > jira.rest['issue/TEST-1'].get
+    => {"id"=>"10000",
+     "self"=>"http://localhost:8080/rest/api/2/issue/10000",
+     "key"=>"TEST-1",
+     "fields"=>{ ... }
+     }
 
     > jira.rest['serverInfo'].get
     => {"baseUrl"=>"http://localhost:8080",
