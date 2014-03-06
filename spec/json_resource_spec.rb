@@ -22,12 +22,6 @@ describe Jiraby::JSONResource do
       @jr.should_receive(:wrap).with(:_get, {})
       @jr.get({})
     end
-
-    it "raises JSONParseError when parsing fails" do
-      lambda do
-        @jr.parsed_response('bogus json')
-      end.should raise_error(Jiraby::JSONParseError)
-    end
   end #get
 
   describe "#delete" do

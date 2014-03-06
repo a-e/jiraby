@@ -1,4 +1,5 @@
 require 'rest_client'
+require 'jiraby/entity'
 
 module Jiraby
   class JSONParseError < RuntimeError
@@ -91,14 +92,22 @@ module Jiraby
       return parsed_response(response)
     end
 
-    # Parse `response` as JSON and return a Hash.
+    # Parse `response` as JSON and return a Hash or array of Hashes.
     # Raise `JSONParseError` if parsing fails.
     #
     def parsed_response(response)
       begin
-        return Yajl::Parser.parse(response)
+        json = Yajl::Parser.parse(response)
       rescue Yajl::ParseError => ex
         raise JSONParseError.new(ex.message, response)
+      else
+        if json.is_a?(Hash)
+          return Entity.new(json)
+        else # Array
+          return json.collect do |hash|
+            Entity.new(hash)
+          end
+        end
       end
     end
 
