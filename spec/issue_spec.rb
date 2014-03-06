@@ -13,16 +13,5 @@ describe Jiraby::Issue do
       issue.should == json
     end
   end
-
-  describe '#key' do
-    it "passes through to Hash#key if arguments are included" do
-      @issue.key('10002').should == 'id'
-      @issue.key('TST-1').should == 'key'
-    end
-
-    it "returns the value in the issue's `key` field" do
-      @issue.key.should == 'TST-1'
-    end
-  end
 end
 
