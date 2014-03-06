@@ -156,14 +156,18 @@ module Jiraby
     # @param [Integer, String] max_results
     #   Maximum number of issues to return
     #
+    # FIXME: Adjust this so it gets all results by fetching subsequent pages
     def search(jql, start_at=0, max_results=50)
-      return @rest['search'].post(
+      result = @rest['search'].post(
         {
           :jql => jql,
           :startAt => start_at.to_i,
           :maxResults => max_results.to_i,
         }
       )
+      return result.issues.collect do |issue_json|
+        Issue.from_json(@rest, issue_json)
+      end
     end #search
 
     # Return the Issue with the given key.

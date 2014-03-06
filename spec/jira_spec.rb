@@ -144,9 +144,12 @@ describe Jiraby::Jira do
         #and_return(json_data('search_results.json'))
     end
 
-    it "returns a JSON-style hash of data" do
-      json = @jira.search('', 0, 1)
-      json.keys.should include('issues')
+    it "returns an array of Issue instances" do
+      issues = @jira.search('', 0, 1)
+      issues.should be_an(Array)
+      issues.each do |issue|
+        issue.should be_a(Jiraby::Issue)
+      end
     end
 
     it "limits results to max_results" do
