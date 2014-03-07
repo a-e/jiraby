@@ -5,8 +5,8 @@ describe Jiraby::Jira do
   before(:each) do
     @jira = Jiraby::Jira.new('localhost:9292')
     todo_stub = RuntimeError.new("RestClient call needs a stub")
-    #RestClient.stub(:get).and_raise(todo_stub)
-    #RestClient.stub(:post).and_raise(todo_stub)
+    RestClient.stub(:get).and_raise(todo_stub)
+    RestClient.stub(:post).and_raise(todo_stub)
   end
 
   describe '#initialize' do
@@ -70,12 +70,16 @@ describe Jiraby::Jira do
         end
 
         it "when RestClient::Exception occurs" do
-          @jira.auth.stub(:post).and_raise(RestClient::Exception)
+          @jira.instance_eval do
+            @auth.stub(:post).and_raise(RestClient::Exception)
+          end
           @jira.login('user', 'password').should be_false
         end
 
         it "when Errno::ECONNREFUSED occurs" do
-          @jira.auth.stub(:post).and_raise(Errno::ECONNREFUSED)
+          @jira.instance_eval do
+            @auth.stub(:post).and_raise(Errno::ECONNREFUSED)
+          end
           @jira.login('user', 'password').should be_false
         end
       end
@@ -89,22 +93,33 @@ describe Jiraby::Jira do
         #RestClient.stub(:post).and_return(@login_response_json)
         @jira.login('user', 'user')
         #RestClient.stub(:delete).and_return('{}')
-        @jira.auth.stub(:delete).and_return('{}')
+        @jira.instance_eval do
+          @auth.stub(:delete).and_return('{}')
+        end
         @jira.logout.should be_true
       end
 
       it "returns false on failed logout" do
-        @jira.auth.stub(:delete).and_raise(RestClient::Unauthorized)
+        @jira.instance_eval do
+          @auth.stub(:delete).and_raise(RestClient::Unauthorized)
+        end
         @jira.logout.should be_false
       end
 
       it "returns false when Jira connection can't be made" do
-        #RestClient.stub(:delete).and_raise(Errno::ECONNREFUSED)
-        @jira.auth.stub(:delete).and_raise(Errno::ECONNREFUSED)
+        @jira.instance_eval do
+          @auth.stub(:delete).and_raise(Errno::ECONNREFUSED)
+        end
         @jira.logout.should be_false
       end
     end #logout
   end # Sessions
+
+  context "REST wrappers" do
+    describe "#get" do
+      it "sends a GET request"
+    end
+  end # REST wrappers
 
   describe '#issue' do
     it "returns an Issue for valid issue key" do
@@ -181,7 +196,7 @@ describe Jiraby::Jira do
   describe '#issues' do
     before(:each) do
       @jira.stub(:issue_keys => ['TST-1', 'TST-2', 'TST-3'])
-      @jira.stub(:issue => Jiraby::Issue.new)
+      @jira.stub(:issue => Jiraby::Issue.new(@jira))
       #@jira.resource.stub(:get).with('issue/TST-1').
         #and_return(json_data('issue_10002.json'))
       # FIXME: Clean these up
@@ -265,15 +280,15 @@ describe Jiraby::Jira do
     end
   end #project_meta
 
-  describe '#fields' do
-    it "returns a mapping of field names to IDs" do
-      @jira.fields.should == {
-        "Description" => 'description',
-        "Summary" => 'summary',
-        "My Field" => 'customfield_123',
+  describe '#field_mapping' do
+    it "returns a mapping of field IDs to names" do
+      @jira.field_mapping.should == {
+        'description' => "Description",
+        'summary' => "Summary",
+        'customfield_123' => "My Field",
       }
     end
-  end #fields
+  end #field_mapping
 
 end
 

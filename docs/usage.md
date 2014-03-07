@@ -20,14 +20,14 @@ Using Jiraby from the Ruby console:
 Methods in the [JIRA REST API](https://docs.atlassian.com/jira/REST/6.2/) can be
 accessed like so:
 
-    > jira.rest['issue/TEST-1'].get
+    > jira.get('issue/TEST-1')
     => {"id"=>"10000",
      "self"=>"http://localhost:8080/rest/api/2/issue/10000",
      "key"=>"TEST-1",
      "fields"=>{ ... }
      }
 
-    > jira.rest['serverInfo'].get
+    > jira.get('serverInfo')
     => {"baseUrl"=>"http://localhost:8080",
      "version"=>"6.2",
      "versionNumbers"=>[6, 2, 0],
@@ -37,7 +37,7 @@ accessed like so:
      "scmInfo"=>"aa343257d4ce030d9cb8c531be520be9fac1c996",
      "serverTitle"=>"Jiraby Test"}
 
-    > jira.rest['resolution/1'].get
+    > jira.get('resolution/1')
     => {"self"=>"http://localhost:8080/rest/api/2/resolution/1",
      "id"=>"1",
      "description"=>"A fix for this issue is checked into the tree and tested.",
@@ -45,7 +45,7 @@ accessed like so:
 
 Passing parameters to GET:
 
-    > jira.rest['user/search?username=admin'].get
+    > jira.get('user/search?username=admin')
     => [{"self"=>"http://localhost:8080/rest/api/2/user?username=admin",
       "key"=>"admin",
       "name"=>"admin",

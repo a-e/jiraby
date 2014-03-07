@@ -22,7 +22,7 @@ module Jiraby
   #
   # Then:
   #
-  #     jira.rest['issue/TST-1'].get
+  #     jira.get('issue/TST-1')
   #     ...
   #
   class Jira
@@ -52,7 +52,6 @@ module Jiraby
     end #initialize
 
     attr_reader :url, :api_version
-    attr_reader :rest, :auth
 
     # Return a list of known Jira API versions.
     #
@@ -138,6 +137,22 @@ module Jiraby
       end
     end #not_implemented_in
 
+    # REST wrapper methods
+    def get(path)
+      @rest[path].get
+    end
+
+    def put(path, data)
+      @rest[path].put data
+    end
+
+    def delete(path)
+      @rest[path].delete
+    end
+
+    def post(path, data)
+      @rest[path].post data
+    end
 
     #
     #
@@ -166,7 +181,7 @@ module Jiraby
         }
       )
       return result.issues.collect do |issue_json|
-        Issue.from_json(@rest, issue_json)
+        Issue.new(self, issue_json)
       end
     end #search
 
@@ -186,7 +201,7 @@ module Jiraby
       if json and (json.empty? or json['errorMessages'])
         raise IssueNotFound.new("Issue '#{key}' not found in Jira")
       else
-        return Issue.from_json(@rest, json)
+        return Issue.new(self, json)
       end
     end #issue
 
@@ -206,7 +221,7 @@ module Jiraby
       issue_data = @rest['issue'].post(
         {"fields" => {"project" => {"key" => project_key} } }
       )
-      return Issue.from_json(@rest, issue_data) if issue_data
+      return Issue.new(self, issue_data) if issue_data
       return nil
     end #create_issue
 
@@ -244,16 +259,6 @@ module Jiraby
         raise ProjectNotFound.new("Project '#{project_key}' not found in Jira")
       end
     end #project_meta
-
-
-    # Return a mapping of all field names (labels) to field IDs
-    def fields
-      result = {}
-      @rest['field'].get.each do |field|
-        result[field['name']] = field['id']
-      end
-      return result
-    end #fields
 
 
     # Return the total number of issues matching the given JQL query.
@@ -316,6 +321,12 @@ module Jiraby
       end
       return issue_generator
     end #issues
+
+    # Return a hash of {'field_id' => 'Field Name'} for all fields
+    def field_mapping
+      ids_and_names = @rest['field'].get.collect { |f| [f.id, f.name] }
+      return Hash[ids_and_names]
+    end #field_mapping
 
   end # class Jira
 end # module Jiraby

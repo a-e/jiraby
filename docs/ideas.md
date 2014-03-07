@@ -39,3 +39,16 @@ Maintaining compatibility between both of these could be a royal pain. It's
 probably best to separate the REST / JSON stuff from the specific Jira/API
 version we're using.
 
+Consistency
+-----------
+
+The JIRA REST API is consistent in some things:
+
+  - It (almost) always returns JSON
+    Note: At least one method (PUT /issue/<key>) returns an empty string on success
+  - Use of `self` for each entity
+
+Challenges:
+
+  - How to remain authenticated (pass JSONResource around to each REST request)?
+

@@ -1,16 +1,22 @@
 require 'rake'
 
-desc "Start a pry session with the given Jira host"
+default_host = "localhost:8080"
+
+desc "Start a pry session with the given Jira host (default #{default_host})"
 task :pry, [:jira_host] do |t, args|
   require 'pry'
   require 'jiraby'
   if !args.jira_host
-    puts "Usage: rake pry[jira.host.url]"
+    puts "No hostname given; using #{default_host}"
+    jira_host = default_host
   else
-    jira_url = "http://#{args.jira_host}"
-    puts "Connecting to Jira at #{jira_url}"
-    jira = Jiraby::Jira.new(jira_url)
-    binding.pry
+    jira_host = args.jira_host
   end
+  jira_url = "http://#{jira_host}"
+  puts "Connecting to Jira at #{jira_url}"
+  jira = Jiraby::Jira.new(jira_url)
+  jira.login('admin', 'admin')
+  issue = jira.issue('TEST-1')
+  binding.pry
 end
 

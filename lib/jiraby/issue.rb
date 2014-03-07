@@ -1,44 +1,65 @@
 require 'jiraby/entity'
 
 module Jiraby
-  class Issue < Entity
-    # FIXME: Using a classmethod "constructor" is just a roundabout way to set
-    # the `rest` attribute (overriding `#initialize(rest, data)` does not seem
-    # to work with nested hashes and Hashie::Mash).
-    def self.from_json(json_resource, json_data)
-      issue = self.new(json_data)
-      issue.rest = json_resource
-      return issue
+  class Issue
+    def initialize(jira_instance, json_data={})
+      @jira = jira_instance
+      @data = Entity.new(json_data)
+      # Modifications are stored here until #save is called
+      @updates = Entity.new
     end
-    attr_accessor :rest
 
-    # Set the field named `name` equal to `value`.
-    # `name` may be the field identifier (like `subtasks` or `customfield_10001`),
-    # or it may be the human-readable field name (like `Sub-Tasks` or `My Custom Field`).
+    attr_reader :jira, :data, :updates
+
+    # Return this issue's `key`
+    def key
+      return @data.key
+    end
+
+    # Set field `name_or_id` equal to `value`.
+    def []=(name_or_id, value)
+      @updates[self.field_id(name_or_id)] = value
+    end
+
+    # Return the value in field `name_or_id`.
+    def [](name_or_id)
+      _id = self.field_id(name_or_id)
+      return @updates[_id] || @data.fields[_id]
+    end
+
+    # Return a field ID, given a name or ID. `name_or_id` may be the field's ID
+    # (like "subtasks" or "customfield_10001"), or it may be the human-readable
+    # field name (like "Sub-Tasks" or "My Custom Field").
     #
-    def set(name, value)
-      # TODO: In order to implement this, the Issue class will need access to
-      # Jira's field name mappings (`Jiraby::Jira#fields`)
-    end
-
-    def editmeta
-      @rest["issue/#{self['id']}/editmeta"].get
-    end
-
-    # Return all fields that are editable ("set"table)
-    def settable_fields
-      editable = self.editmeta['fields']
-      return self['fields'].select do |key, value|
-        editable.keys.include?(key) && \
-          editable[key]['operations'].include?('set') && \
-          !value.nil? && !value.empty?
+    # TODO: Raise an exception on invalid name_or_id?
+    def field_id(name_or_id)
+      if @data.fields.include?(name_or_id)
+        return name_or_id
+      else
+        _id = @jira.field_mapping.key(name_or_id)
+        if _id.nil?
+          raise RuntimeError.new("Invalid field name or ID: #{name_or_id}")
+        end
+        return _id
       end
     end
 
-    # Save this issue by sending a PUT request
+    def editmeta
+      @jira.get("issue/#{@data.key}/editmeta")
+    end
+
+    # Return true if this issue has been modified since saving.
+    def modified?
+      !@updates.empty?
+    end
+
+    # Save this issue by sending a PUT request.
+    # Return true if save was successful.
     def save
-      data = {'fields' => self.settable_fields}
-      @rest["issue/#{self['id']}"].put data.to_json
+      json_data = {'fields' => @updates}
+      @jira.put("issue/#{@data.key}", json_data)
+      @updates = Entity.new
+      return true
     end
   end
 end
