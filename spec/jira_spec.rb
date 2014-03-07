@@ -117,7 +117,15 @@ describe Jiraby::Jira do
 
   context "REST wrappers" do
     describe "#get" do
-      it "sends a GET request"
+      it "sends a GET request" do
+        # FIXME: This is kind of a mess...
+        resource = Jiraby::JSONResource.new(@jira.base_url)
+        @jira.instance_eval do
+          @rest.should_receive(:[]).with('issue/TST-1').and_return(resource)
+        end
+        resource.should_receive(:get)
+        @jira.get('issue/TST-1')
+      end
     end
   end # REST wrappers
 
@@ -197,13 +205,6 @@ describe Jiraby::Jira do
     before(:each) do
       @jira.stub(:issue_keys => ['TST-1', 'TST-2', 'TST-3'])
       @jira.stub(:issue => Jiraby::Issue.new(@jira))
-      #@jira.resource.stub(:get).with('issue/TST-1').
-        #and_return(json_data('issue_10002.json'))
-      # FIXME: Clean these up
-      #@jira.resource.stub(:post).and_return({})
-      #RestClient.stub(:get).and_return({})
-      #RestClient.stub(:post).and_return({})
-      #RestClient.stub(:put).and_return({})
     end
 
     it "returns a Generator" do
@@ -261,11 +262,6 @@ describe Jiraby::Jira do
   end #project
 
   describe '#project_meta' do
-    before(:each) do
-      #@jira.resource.stub(:get).with('issue/createmeta', anything).
-        #and_return(json_data('issue_createmeta.json'))
-    end
-
     it "returns the project createmeta info if the project exists" do
       meta = @jira.project_meta('TST')
       expect_keys = ['name', 'self', 'issuetypes', 'id', 'avatarUrls', 'key']
