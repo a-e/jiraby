@@ -44,13 +44,54 @@ module Jiraby
       end
     end
 
+    # Return true if this issue has a field with the given name or ID,
+    # false otherwise.
+    def has_field?(name_or_id)
+      begin
+        self.field_id(name_or_id)
+      rescue RuntimeError
+        return false
+      else
+        return true
+      end
+    end
+
+    # Return true if this issue is a subtask, false otherwise.
+    def is_subtask?
+      return @data.fields.issuetype.subtask
+    end
+
+    # Return true if this issue is assigned to someone, false otherwise.
+    def is_assigned?
+      return !@data.fields.assignee.nil?
+    end
+
+    # Return this issue's parent key, or nil if this issue has no parent.
+    def parent
+      if is_subtask?
+        return @data.fields.parent.key
+      else
+        return nil
+      end
+    end
+
+    # Return this issue's subtask keys
+    def subtasks
+      return @data.fields.subtasks.collect { |st| st.key }
+    end
+
+    # Return a sorted list of valid field IDs for this issue.
+    def field_ids
+      return @data.fields.keys.sort
+    end
+
     def editmeta
-      @jira.get("issue/#{@data.key}/editmeta")
+      return @jira.get("issue/#{@data.key}/editmeta")
     end
 
     # Return true if this issue has been modified since saving.
     def modified?
-      !@updates.empty?
+      return !@updates.empty?
     end
 
     # Save this issue by sending a PUT request.

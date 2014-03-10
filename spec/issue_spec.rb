@@ -125,6 +125,26 @@ describe Jiraby::Issue do
       end
     end
 
+    describe "#has_field?" do
+      it "TODO"
+    end #has_field?
+
+    describe "#is_subtask?" do
+      it "TODO"
+    end #is_subtask?
+
+    describe "#is_assigned?" do
+      it "TODO"
+    end #is_assigned?
+
+    describe "#parent" do
+      it "TODO"
+    end #parent
+
+    describe "#field_ids" do
+      it "TODO"
+    end #field_ids
+
   end # Instance methods"
 end
 
