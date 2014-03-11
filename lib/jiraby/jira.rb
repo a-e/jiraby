@@ -49,9 +49,10 @@ module Jiraby
       @api_version = api_version
       @auth = Jiraby::JSONResource.new(auth_url)
       @rest = Jiraby::JSONResource.new(base_url)
+      @_field_mapping = nil
     end #initialize
 
-    attr_reader :url, :api_version
+    attr_reader :url, :api_version, :rest
 
     # Return a list of known Jira API versions.
     #
@@ -180,6 +181,7 @@ module Jiraby
           :maxResults => max_results.to_i,
         }
       )
+      # FIXME: Check for errors
       return result.issues.collect do |issue_json|
         Issue.new(self, issue_json)
       end
@@ -324,8 +326,11 @@ module Jiraby
 
     # Return a hash of {'field_id' => 'Field Name'} for all fields
     def field_mapping
-      ids_and_names = @rest['field'].get.collect { |f| [f.id, f.name] }
-      return Hash[ids_and_names]
+      if @_field_mapping.nil?
+        ids_and_names = @rest['field'].get.collect { |f| [f.id, f.name] }
+        @_field_mapping = Hash[ids_and_names]
+      end
+      return @_field_mapping
     end #field_mapping
 
   end # class Jira
