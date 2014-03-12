@@ -138,7 +138,7 @@ module Jiraby
       end
     end #not_implemented_in
 
-    # REST wrapper methods
+    # REST wrapper methods returning Jiraby::Entity
     def get(path)
       @rest[path].get
     end
@@ -163,7 +163,7 @@ module Jiraby
     #
 
     # Invoke the 'search' method to find issues matching the given JQL query,
-    # and return the raw JSON response.
+    # and return the response as an Entity.
     #
     # @param [String] jql
     #   JQL query for the issues you want to match
@@ -171,20 +171,24 @@ module Jiraby
     #   0-based index of the first issue to match
     # @param [Integer, String] max_results
     #   Maximum number of issues to return
+    # @param [Bool] expand_fields
+    #   True to include all navigable fields (default),
+    #   false to omit all issue fields.
     #
-    # FIXME: Adjust this so it gets all results by fetching subsequent pages
-    def search(jql, start_at=0, max_results=50)
-      result = @rest['search'].post(
-        {
-          :jql => jql,
-          :startAt => start_at.to_i,
-          :maxResults => max_results.to_i,
-        }
-      )
-      # FIXME: Check for errors
-      return result.issues.collect do |issue_json|
-        Issue.new(self, issue_json)
-      end
+    # @return [Jiraby::Entity]
+    #
+    def search(jql, start_at=0, max_results=50, expand_fields=true)
+      # The Jira `expand` parameter does not work correctly:
+      #   https://jira.atlassian.com/browse/JRA-30854
+      # so instead we'll just use the `fields` parameter.
+      fields = expand_fields ? ['*navigable'] : ['']
+
+      return self.post 'search', {
+        :jql => jql,
+        :startAt => start_at.to_i,
+        :maxResults => max_results.to_i,
+        :fields => fields
+      }
     end #search
 
     # Return the Issue with the given key.
@@ -199,7 +203,7 @@ module Jiraby
     #   If the issue was not found or fetching failed
     #
     def issue(key)
-      json = @rest["issue/#{key}"].get
+      json = self.get "issue/#{key}"
       if json and (json.empty? or json['errorMessages'])
         raise IssueNotFound.new("Issue '#{key}' not found in Jira")
       else
@@ -220,9 +224,9 @@ module Jiraby
     # @return [Issue]
     #
     def create_issue(project_key, issue_type='Bug')
-      issue_data = @rest['issue'].post(
-        {"fields" => {"project" => {"key" => project_key} } }
-      )
+      issue_data = self.post 'issue', {
+        "fields" => {"project" => {"key" => project_key} }
+      }
       return Issue.new(self, issue_data) if issue_data
       return nil
     end #create_issue
@@ -238,7 +242,7 @@ module Jiraby
     #   nil if no such project is found.
     #
     def project(key)
-      json = @rest["project/#{key}"].get
+      json = self.get "project/#{key}"
       if json and (json.empty? or json['errorMessages'])
         raise ProjectNotFound.new("Project '#{key}' not found in Jira")
       else
@@ -253,8 +257,8 @@ module Jiraby
     # TODO: Move this into the Project class?
     #
     def project_meta(project_key)
-      meta = @rest['issue/createmeta'].get({'expand' => 'projects.issuetypes.fields'})
-      metadata = meta['projects'].find {|proj| proj['key'] == project_key}
+      meta = self.get 'issue/createmeta?expand=projects.issuetypes.fields'
+      metadata = meta.projects.find {|proj| proj['key'] == project_key}
       if metadata and !metadata.nil?
         return metadata
       else
@@ -263,7 +267,8 @@ module Jiraby
     end #project_meta
 
 
-    # Return the total number of issues matching the given JQL query.
+    # Return the total number of issues matching the given JQL query, or
+    # the count of all issues if no JQL query is given.
     #
     # @param [String] jql
     #   JQL query for the issues you want to match
@@ -272,7 +277,8 @@ module Jiraby
     #   Number of issues matching the query
     #
     def count(jql='')
-      return search(jql, 0, 1)['total']
+      result = self.search(jql, 0, 1, false)
+      return result.total
     end #count
 
 
@@ -292,7 +298,7 @@ module Jiraby
       start = 0
 
       # Get the first batch
-      results = search(jql, start, max_results)
+      results = search(jql, start, max_results, false)
 
       # Until we've gotten all the issues, get successive batches
       while results['total'] >= (start + results['issues'].length)
@@ -327,7 +333,7 @@ module Jiraby
     # Return a hash of {'field_id' => 'Field Name'} for all fields
     def field_mapping
       if @_field_mapping.nil?
-        ids_and_names = @rest['field'].get.collect { |f| [f.id, f.name] }
+        ids_and_names = self.get('field').collect { |f| [f.id, f.name] }
         @_field_mapping = Hash[ids_and_names]
       end
       return @_field_mapping

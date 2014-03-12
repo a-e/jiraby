@@ -162,12 +162,10 @@ describe Jiraby::Jira do
   end #create_issue
 
   describe '#search' do
-    it "returns an array of Issue instances" do
-      issues = @jira.search('', 0, 1)
-      issues.should be_an(Array)
-      issues.each do |issue|
-        issue.should be_a(Jiraby::Issue)
-      end
+    it "returns a Jiraby::Entity instance" do
+      result = @jira.search('', 0, 1)
+      result.should be_a(Jiraby::Entity)
+      result.should include('issues')
     end
 
     it "limits results to max_results" do
@@ -184,14 +182,14 @@ describe Jiraby::Jira do
     end
 
     it "returns a list of issue keys" do
-      search_results = {
+      search_results = Jiraby::Entity.new({
         'total' => 3,
         'issues' => [
           {'key' => 'TST-1'},
           {'key' => 'TST-2'},
           {'key' => 'TST-3'},
         ]
-      }
+      })
       @jira.stub(:search).and_return(search_results)
 
       @jira.issue_keys('project = TEST').should == ['TST-1', 'TST-2', 'TST-3']
@@ -227,15 +225,15 @@ describe Jiraby::Jira do
 
   describe '#count' do
     it "returns the number of issues matching a JQL query" do
-      search_results = {'total' => 5}
+      search_results = Jiraby::Entity.new({'total' => 5})
       @jira.should_receive(:search).
-        with('key = TST-1', anything, anything).
+        with('key = TST-1', anything, anything, anything).
         and_return(search_results)
       @jira.count('key = TST-1').should == 5
     end
 
     it "returns a count of all issues when JQL is empty" do
-      search_results = {'total' => 15}
+      search_results = Jiraby::Entity.new({'total' => 15})
       @jira.stub(:search).and_return(search_results)
 
       @jira.count('').should == 15
