@@ -126,23 +126,129 @@ describe Jiraby::Issue do
     end
 
     describe "#has_field?" do
-      it "TODO"
+      before(:each) do
+        @ids_and_names = {
+          'description' => 'Description',
+          'sub-tasks' => 'Sub-Tasks',
+          'project' => 'Project',
+        }
+        @jira.stub(:field_mapping => @ids_and_names)
+      end
+
+      it "true when issue has a field with the given ID" do
+        @ids_and_names.keys.each do |id|
+          @issue.has_field?(id).should be_true
+        end
+      end
+
+      it "true when issue has a field with the given name" do
+        @ids_and_names.values.each do |name|
+          @issue.has_field?(name).should be_true
+        end
+      end
+
+      it "false when issue has a no field with the given ID or name" do
+        @issue.has_field?("Completely Bogus").should be_false
+      end
     end #has_field?
 
     describe "#is_subtask?" do
-      it "TODO"
+      it "true when issuetype.subtask is true" do
+        data = { 'fields' => { 'issuetype' => {'subtask' => true} } }
+        issue = Jiraby::Issue.new(@jira, data)
+        issue.is_subtask?.should be_true
+      end
+
+      it "false when issuetype.subtask is false" do
+        data = { 'fields' => { 'issuetype' => {'subtask' => false} } }
+        issue = Jiraby::Issue.new(@jira, data)
+        issue.is_subtask?.should be_false
+      end
+
+      it "false when issuetype.subtask is not set" do
+        data = { 'fields' => { 'issuetype' => {} } }
+        issue = Jiraby::Issue.new(@jira, data)
+        issue.is_subtask?.should be_false
+      end
     end #is_subtask?
 
     describe "#is_assigned?" do
-      it "TODO"
+      it "true when assignee is set" do
+        data = { 'fields' => { 'assignee' => {'name' => 'someone'} } }
+        issue = Jiraby::Issue.new(@jira, data)
+        issue.is_assigned?.should be_true
+      end
+
+      it "false when assignee is nil" do
+        data = { 'fields' => { 'assignee' => nil } }
+        issue = Jiraby::Issue.new(@jira, data)
+        issue.is_assigned?.should be_false
+      end
     end #is_assigned?
 
     describe "#parent" do
-      it "TODO"
+      it "returns the parent key when issue is a subtask" do
+        parent_key = 'FOO-234'
+        data = {
+          'fields' => {
+            'parent' => {'key' => parent_key},
+            'issuetype' => {'subtask' => true},
+          }
+        }
+        issue = Jiraby::Issue.new(@jira, data)
+        issue.parent.should == parent_key
+      end
+
+      it "returns nil when issue is not a subtask" do
+        data = {
+          'fields' => {
+            'issuetype' => {'subtask' => false},
+          }
+        }
+        issue = Jiraby::Issue.new(@jira, data)
+        issue.parent.should be_nil
+      end
     end #parent
 
+    describe "#subtasks" do
+      it "returns an array of subtask keys" do
+        subtask_keys = ['ST-01', 'ST-02', 'ST-03']
+        data = {
+          'fields' => {
+            'subtasks' => [
+              {'key' => 'ST-01'},
+              {'key' => 'ST-02'},
+              {'key' => 'ST-03'},
+            ]
+          }
+        }
+        issue = Jiraby::Issue.new(@jira, data)
+        issue.subtasks.should == subtask_keys
+      end
+
+      it "returns an empty array if the issue has no subtasks" do
+        data = {
+          'fields' => {
+            'subtasks' => []
+          }
+        }
+        issue = Jiraby::Issue.new(@jira, data)
+        issue.subtasks.should == []
+      end
+    end #subtasks
+
     describe "#field_ids" do
-      it "TODO"
+      it "returns a sorted array of the issue's field IDs" do
+        data = {
+          'fields' => {
+            'foo' => 'x',
+            'bar' => 'y',
+            'baz' => 'z',
+          }
+        }
+        issue = Jiraby::Issue.new(@jira, data)
+        issue.field_ids.should == ['bar', 'baz', 'foo']
+      end
     end #field_ids
 
   end # Instance methods"

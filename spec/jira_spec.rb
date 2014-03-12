@@ -116,15 +116,37 @@ describe Jiraby::Jira do
   end # Sessions
 
   context "REST wrappers" do
+    before(:each) do
+      @path = 'fake/path'
+      @resource = Jiraby::JSONResource.new(@jira.base_url)
+      @jira.rest.stub(:[]).with(@path).and_return(@resource)
+    end
+
     describe "#get" do
       it "sends a GET request" do
-        # FIXME: This is kind of a mess...
-        resource = Jiraby::JSONResource.new(@jira.base_url)
-        @jira.instance_eval do
-          @rest.should_receive(:[]).with('issue/TST-1').and_return(resource)
-        end
-        resource.should_receive(:get)
-        @jira.get('issue/TST-1')
+        @resource.should_receive(:get)
+        @jira.get(@path)
+      end
+    end
+
+    describe "#put" do
+      it "sends a PUT request" do
+        @resource.should_receive(:put)
+        @jira.put(@path, {})
+      end
+    end
+
+    describe "#post" do
+      it "sends a POST request" do
+        @resource.should_receive(:post)
+        @jira.post(@path, {})
+      end
+    end
+
+    describe "#delete" do
+      it "sends a DELETE request" do
+        @resource.should_receive(:delete)
+        @jira.delete(@path)
       end
     end
   end # REST wrappers
