@@ -99,6 +99,7 @@ module Jiraby
       begin
         json = Yajl::Parser.parse(response)
       rescue Yajl::ParseError => ex
+        # FIXME: Sometimes getting "input must be a string or IO" error here
         raise JSONParseError.new(ex.message, response)
       else
         if json.is_a?(Hash)
@@ -119,6 +120,8 @@ module Jiraby
     def maybe_error_response(&block)
       begin
         yield
+      rescue RestClient::RequestTimeout => ex
+        raise ex
       rescue RestClient::Exception => ex
         ex.response
       end

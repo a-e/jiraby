@@ -105,7 +105,7 @@ describe Jiraby::Issue do
       end
     end
 
-    describe "#save" do
+    describe "#save!" do
       it "sends a PUT request to Jira with updates" do
         @issue['description'] = "Modified description"
         expect_fields = {
@@ -113,7 +113,7 @@ describe Jiraby::Issue do
         }
         @jira.should_receive(:put).
           with("issue/#{@issue.key}", expect_fields)
-        @issue.save
+        @issue.save!
       end
 
       it "updates the data attribute with the new changes" do
@@ -123,7 +123,7 @@ describe Jiraby::Issue do
 
         @issue.data.fields.description.should == original_description
         @issue['description'] = modified_description
-        @issue.save
+        @issue.save!
         @issue.data.fields.description.should == modified_description
       end
 
@@ -131,7 +131,7 @@ describe Jiraby::Issue do
         @jira.stub(:put => nil)
         @issue['description'] = "Modified description"
         @issue.modified?.should be_true
-        @issue.save
+        @issue.save!
         @issue.modified?.should be_false
       end
     end

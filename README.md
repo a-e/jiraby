@@ -25,12 +25,35 @@ You can provide a port number if needed:
 
 Look up an issue by its key:
 
-    issue_15 = jira.issue('myproj-15')
-    issue_15 = jira.issue('MYPROJ-15') # case-insensitive
+    issue = jira.issue('myproj-15')
+    issue = jira.issue('MYPROJ-15') # case-insensitive
 
-View the raw data returned from Jira's REST API:
+Use `[]` and `[]=` to view or modify issue fields:
 
-    issue_15.data
+    issue['summary']
+    => "Sample issue"
+
+    issue['summary'] = "Modified summary"
+
+    issue['summary']
+    => "Modified summary"
+
+See what fields were updated and need to be saved:
+
+    issue.modified?
+    => true
+
+    issue.updates
+    => {"summary" => "Modified summary"}
+
+Save the updates back to Jira:
+
+    issue.save!
+    => true
+
+Or view the raw data returned from Jira's REST API:
+
+    issue.data
     => {
       'id' => '10024',
       'key' => 'MYPROJ-15',
@@ -51,13 +74,6 @@ See a list of field IDs, including any project-specific or other custom fields:
       "customfield_10000",
       ...
     ]
-
-View field values:
-
-    issue['summary']
-    => "Realign the dilithium stabilizer matrix."
-    issue['duedate']
-    => "2014-03-31"
 
 
 REST API

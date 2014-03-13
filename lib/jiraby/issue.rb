@@ -96,7 +96,7 @@ module Jiraby
 
     # Save this issue by sending a PUT request.
     # Return true if save was successful.
-    def save
+    def save!
       json_data = {'fields' => @updates}
       # TODO: Handle failed save
       @jira.put("issue/#{@data.key}", json_data)
