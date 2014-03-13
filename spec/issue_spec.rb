@@ -3,8 +3,12 @@ require_relative 'data/jira_issues'
 
 describe Jiraby::Issue do
   before(:each) do
+    @field_mapping = {
+      'description' => 'Description',
+      'customfield_10001' => 'Custom Field',
+    }
     @jira = Jiraby::Jira.new('jira.example.com')
-    @jira.stub(:field_mapping => {})
+    @jira.stub(:field_mapping => @field_mapping)
     @issue = Jiraby::Issue.new(@jira, json_data('issue_10002.json'))
   end
 
@@ -25,14 +29,21 @@ describe Jiraby::Issue do
         @issue['description'].should == "example bug report"
       end
 
-      it "accepts field `name`"
+      it "accepts field `name`" do
+        @issue['Custom Field'].should == "custom field value"
+      end
 
       it "returns the value set by `#[]=`" do
         @issue['description'] = "Foobar"
         @issue['description'].should == "Foobar"
       end
 
-      it "raises an exception on invalid field name"
+      it "raises an exception on invalid field name" do
+        lambda do
+          @issue['bogus']
+        end.should raise_error(
+          RuntimeError, /Invalid field name or ID: bogus/)
+      end
     end
 
     describe "#[]=" do
@@ -41,8 +52,17 @@ describe Jiraby::Issue do
         @issue.updates['description'].should == "Foobar"
       end
 
-      it "accepts field `name`"
-      it "raises an exception on invalid field name"
+      it "accepts field `name`" do
+        @issue['Custom Field'] = "Modified"
+        @issue.updates[@field_mapping.key('Custom Field')].should == "Modified"
+      end
+
+      it "raises an exception on invalid field name" do
+        lambda do
+          @issue['bogus'] = "Modified"
+        end.should raise_error(
+          RuntimeError, /Invalid field name or ID: bogus/)
+      end
     end
 
     describe "#field_id" do

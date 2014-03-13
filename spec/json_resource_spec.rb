@@ -8,7 +8,34 @@ describe Jiraby::JSONResource do
   end
 
   describe "#initialize" do
-    it "TODO"
+    # Ensure that `options` contains appropriate JSON headers
+    def should_include_json_headers(options)
+      options.should include(:headers)
+      options[:headers].should include(:content_type)
+      options[:headers][:content_type].should == :json
+      options[:headers].should include(:accept)
+      options[:headers][:accept].should == :json
+    end
+
+    it "returns a JSONResource instance" do
+      jr = Jiraby::JSONResource.new('http://example.com')
+      jr.should be_a(Jiraby::JSONResource)
+    end
+
+    it "sets options[:headers] to send/receive JSON" do
+      jr = Jiraby::JSONResource.new('http://example.com')
+      should_include_json_headers(jr.options)
+    end
+
+    it "merges additional options" do
+      options = {:headers => {:foo => 'bar'}, :other => 'x'}
+      jr = Jiraby::JSONResource.new('http://example.com', options)
+      should_include_json_headers(jr.options)
+      jr.options.should include(:other)
+      jr.options[:other].should == 'x'
+      jr.options[:headers].should include(:foo)
+      jr.options[:headers][:foo].should == 'bar'
+    end
   end #initialize
 
   describe "#[]" do

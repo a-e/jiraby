@@ -4,6 +4,7 @@
   "key": "TST-1",
   "fields": {
     "description": "example bug report",
+    "customfield_10001": "custom field value",
     "sub-tasks": [
       {
         "id": "10000",
