@@ -172,6 +172,15 @@ describe Jiraby::JSONResource do
       got_response.should == expect_response
     end
 
+    it "re-raises RestClient::RequestTimeout" do
+      exception = RestClient::RequestTimeout.new
+      lambda do
+        @jr.maybe_error_response do
+          raise exception
+        end
+      end.should raise_error(exception)
+    end
+
     it "yields the exception's response if a RestClient::Excception occurs" do
       exception = RestClient::Exception.new
       exception.response = "The exception response"
