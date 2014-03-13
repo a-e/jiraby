@@ -98,7 +98,9 @@ module Jiraby
     # Return true if save was successful.
     def save
       json_data = {'fields' => @updates}
+      # TODO: Handle failed save
       @jira.put("issue/#{@data.key}", json_data)
+      @data.fields.merge!(@updates)
       @updates = Entity.new
       return true
     end

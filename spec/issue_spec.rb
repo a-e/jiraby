@@ -116,6 +116,17 @@ describe Jiraby::Issue do
         @issue.save
       end
 
+      it "updates the data attribute with the new changes" do
+        @jira.stub(:put)
+        original_description = @issue['description']
+        modified_description = "Modified description"
+
+        @issue.data.fields.description.should == original_description
+        @issue['description'] = modified_description
+        @issue.save
+        @issue.data.fields.description.should == modified_description
+      end
+
       it "resets modified status" do
         @jira.stub(:put => nil)
         @issue['description'] = "Modified description"
