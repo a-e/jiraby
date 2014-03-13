@@ -138,17 +138,29 @@ module Jiraby
       end
     end #not_implemented_in
 
+    # Return a URL query, suitable for use in a GET/DELETE/HEAD request
+    # that accepts queries like `?var1=value1&var2=value2`.
+    def path_with_query(path, query={})
+      # TODO: Escape special chars
+      params = query.map {|k,v| "#{k}=#{v}"}.join("&")
+      if params.empty?
+        return path
+      else
+        return "#{path}?#{params}"
+      end
+    end
+
     # REST wrapper methods returning Jiraby::Entity
-    def get(path)
-      @rest[path].get
+    def get(path, query={})
+      @rest[path_with_query(path, query)].get
+    end
+
+    def delete(path, query={})
+      @rest[path_with_query(path, query)].delete
     end
 
     def put(path, data)
       @rest[path].put data
-    end
-
-    def delete(path)
-      @rest[path].delete
     end
 
     def post(path, data)
@@ -304,7 +316,7 @@ module Jiraby
       while results['total'] >= (start + results['issues'].length)
         keys.concat(results['issues'].collect {|iss| iss['key']})
         start += max_results
-        results = search(jql, start, max_results)
+        results = search(jql, start, max_results, false)
       end
 
       return keys
@@ -339,5 +351,19 @@ module Jiraby
       return @_field_mapping
     end #field_mapping
 
+    # Iterate over paged items returned by a REST method
+    # that accepts `startAt` and `maxResults` parameters.
+    # Examples:
+    #   GET /dashboard
+    #   GET /search
+    #   POST /search
+    #   GET /user/assignable/multiProjectSearch
+    #   GET /user/assignable/search
+    # Note: Some of these methods return a plain JSON array,
+    # while others return a JSON object including the submitted
+    # `startAt` and `maxResults` values, as well as a `total` value.
+    def iterate
+      nil
+    end
   end # class Jira
 end # module Jiraby

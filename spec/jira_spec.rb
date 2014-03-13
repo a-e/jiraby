@@ -122,6 +122,19 @@ describe Jiraby::Jira do
       @jira.rest.stub(:[]).with(@path).and_return(@resource)
     end
 
+    describe "#path_with_query" do
+      it "returns path as-is if query is empty" do
+        @jira.path_with_query("user/search").should == "user/search"
+      end
+
+      it "returns path with query parameters appended" do
+        path = "user/search"
+        query = {:username => "someone", :startAt => 0, :maxResults => 10}
+        expect_path = "user/search?username=someone&startAt=0&maxResults=10"
+        @jira.path_with_query(path, query).should == expect_path
+      end
+    end
+
     describe "#get" do
       it "sends a GET request" do
         @resource.should_receive(:get)
