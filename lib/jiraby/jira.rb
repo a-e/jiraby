@@ -140,7 +140,7 @@ module Jiraby
 
     # Return a URL query, suitable for use in a GET/DELETE/HEAD request
     # that accepts queries like `?var1=value1&var2=value2`.
-    def path_with_query(path, query={})
+    def _path_with_query(path, query={})
       # TODO: Escape special chars
       params = query.map {|k,v| "#{k}=#{v}"}.join("&")
       if params.empty?
@@ -152,11 +152,11 @@ module Jiraby
 
     # REST wrapper methods returning Jiraby::Entity
     def get(path, query={})
-      @rest[path_with_query(path, query)].get
+      @rest[_path_with_query(path, query)].get
     end
 
     def delete(path, query={})
-      @rest[path_with_query(path, query)].delete
+      @rest[_path_with_query(path, query)].delete
     end
 
     def put(path, data)

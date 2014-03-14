@@ -122,16 +122,16 @@ describe Jiraby::Jira do
       @jira.rest.stub(:[]).with(@path).and_return(@resource)
     end
 
-    describe "#path_with_query" do
+    describe "#_path_with_query" do
       it "returns path as-is if query is empty" do
-        @jira.path_with_query("user/search").should == "user/search"
+        @jira._path_with_query("user/search").should == "user/search"
       end
 
       it "returns path with query parameters appended" do
         path = "user/search"
         query = {:username => "someone", :startAt => 0, :maxResults => 10}
         expect_path = "user/search?username=someone&startAt=0&maxResults=10"
-        @jira.path_with_query(path, query).should == expect_path
+        @jira._path_with_query(path, query).should == expect_path
       end
     end
 
@@ -200,6 +200,46 @@ describe Jiraby::Jira do
     it "returns an Enumerator instance" do
       enum = @jira.enumerator(:get, 'user/search')
       enum.should be_an Enumerator
+    end
+
+    it "gets multiple pages by incrementing `startAt`"
+
+    it "works when REST method returns an Entity" do
+      entity = Jiraby::Entity.new(
+        :issues => [
+          {:key => 'TST-1'},
+          {:key => 'TST-2'},
+          {:key => 'TST-3'},
+        ]
+      )
+      @jira.stub(:get).and_return(entity)
+
+      enum = @jira.enumerator(:get, 'fake_search', {}, 'issues')
+      enum.count.should == 3
+    end
+
+    it "works when REST method returns an Array of Entity" do
+      issue_keys = ['TST-1', 'TST-2', 'TST-3']
+      entities = issue_keys.map {|key| Jiraby::Entity.new(:key => key)}
+      @jira.stub(:get).and_return(entities)
+
+      enum = @jira.enumerator(:get, 'fake_search')
+      enum.count.should == 3
+      enum.to_a.should == entities
+    end
+
+    it "supports the .next method" do
+      # FIXME: For some reason, .next works fine in this test, but when
+      # connected to an actual Jira instance, it blows up with
+      #   SystemStackError: stack level too deep
+      issue_keys = ['TST-1', 'TST-2', 'TST-3']
+      entities = issue_keys.map {|key| Jiraby::Entity.new(:key => key)}
+      @jira.stub(:get).and_return(entities)
+
+      enum = @jira.enumerator(:get, 'fake_search')
+      enum.next.key.should == 'TST-1'
+      enum.next.key.should == 'TST-2'
+      enum.next.key.should == 'TST-3'
     end
   end
 
