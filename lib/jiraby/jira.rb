@@ -280,6 +280,9 @@ module Jiraby
     #   If the issue was not found or fetching failed
     #
     def issue(key)
+      if key.nil? || key.to_s.strip.empty?
+        raise ArgumentError.new("Issue key is required")
+      end
       json = self.get "issue/#{key}"
       if json and (json.empty? or json['errorMessages'])
         raise IssueNotFound.new("Issue '#{key}' not found in Jira")

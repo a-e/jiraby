@@ -169,6 +169,18 @@ describe Jiraby::Jira do
       @jira.issue('TST-1').should be_a Jiraby::Issue
     end
 
+    it "raises ArgumentError if key is nil" do
+      lambda do
+        @jira.issue(nil)
+      end.should raise_error(ArgumentError, /Issue key is required/)
+    end
+
+    it "raises ArgumentError if key is empty" do
+      lambda do
+        @jira.issue(' ')
+      end.should raise_error(ArgumentError, /Issue key is required/)
+    end
+
     it "raises IssueNotFound for invalid issue key" do
       lambda do
         @jira.issue('BOGUS-429')
