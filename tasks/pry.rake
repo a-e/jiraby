@@ -15,8 +15,6 @@ task :pry, [:jira_host] do |t, args|
   jira_url = "http://#{jira_host}"
   puts "Connecting to Jira at #{jira_url}"
   jira = Jiraby::Jira.new(jira_url)
-  jira.login('admin', 'admin')
-  issue = jira.issue('TEST-1')
   binding.pry
 end
 
