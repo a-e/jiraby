@@ -19,7 +19,7 @@ describe Jiraby::JSONResource do
 
     it "returns a JSONResource instance" do
       jr = Jiraby::JSONResource.new('http://example.com')
-      jr.should be_a(Jiraby::JSONResource)
+      jr.should be_a Jiraby::JSONResource
     end
 
     it "sets options[:headers] to send/receive JSON" do
@@ -40,7 +40,7 @@ describe Jiraby::JSONResource do
 
   describe "#[]" do
     it "returns a JSONResource instance" do
-      @jr['subpath'].should be_a(Jiraby::JSONResource)
+      @jr['subpath'].should be_a Jiraby::JSONResource
     end
   end #[]
 

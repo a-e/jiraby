@@ -166,7 +166,7 @@ describe Jiraby::Jira do
 
   describe '#issue' do
     it "returns an Issue for valid issue key" do
-      @jira.issue('TST-1').should be_an_instance_of(Jiraby::Issue)
+      @jira.issue('TST-1').should be_a Jiraby::Issue
     end
 
     it "raises IssueNotFound for invalid issue key" do
@@ -196,80 +196,45 @@ describe Jiraby::Jira do
     end
   end #create_issue
 
+  describe "#enumerator" do
+    it "returns an Enumerator instance" do
+      enum = @jira.enumerator(:get, 'user/search')
+      enum.should be_an Enumerator
+    end
+  end
+
+  # TODO: Populate some more test issues in order to properly test this
   describe '#search' do
-    it "returns a Jiraby::Entity instance" do
-      result = @jira.search('', 0, 1)
-      result.should be_a(Jiraby::Entity)
-      result.should include('issues')
-    end
-
-    it "limits results to max_results" do
-      [1, 5, 10].each do |max_results|
-        expect_params = {:jql => '', :startAt => 0, :maxResults => max_results}
-        json = @jira.search('', 0, max_results)
-      end
-    end
-  end #search
-
-  # TODO: Populate some more test issues in order to properly test this
-  describe '#issue_keys' do
-    before(:each) do
-    end
-
-    it "returns a list of issue keys" do
-      search_results = Jiraby::Entity.new({
-        'total' => 3,
-        'issues' => [
-          {'key' => 'TST-1'},
-          {'key' => 'TST-2'},
-          {'key' => 'TST-3'},
-        ]
-      })
-      @jira.stub(:search).and_return(search_results)
-
-      @jira.issue_keys('project = TEST').should == ['TST-1', 'TST-2', 'TST-3']
-    end
-
-    it "combines multiple pages of results into a single list"
-  end #issue_keys
-
-  # TODO: Populate some more test issues in order to properly test this
-  describe '#issues' do
     before(:each) do
       @jira.stub(:issue_keys => ['TST-1', 'TST-2', 'TST-3'])
       @jira.stub(:issue => Jiraby::Issue.new(@jira))
     end
 
-    it "returns a Generator" do
+    it "returns an Enumerator" do
       require 'enumerator'
-      @jira.issues.should be_an_instance_of(Enumerator::Generator)
+      @jira.search('project=TST').should be_an Enumerator
     end
 
     it "yields one Issue instance for each issue key" do
-      @jira.issues.each do |issue|
-        issue.should be_a(Jiraby::Issue)
+      @jira.search('project=TST').each do |issue|
+        issue.should be_a Jiraby::Issue
       end
     end
+  end #search
 
-    it "uses #issue_keys to find issues matching a JQL query" do
-      jql = "key = TST-1"
-      @jira.should_receive(:issue_keys).with(jql).and_return([])
-      @jira.issues(jql)
-    end
-  end #issues
-
+  # FIXME: Test this using the fake Jira instance
   describe '#count' do
     it "returns the number of issues matching a JQL query" do
       search_results = Jiraby::Entity.new({'total' => 5})
-      @jira.should_receive(:search).
-        with('key = TST-1', anything, anything, anything).
+      @jira.should_receive(:post).
+        with('search', anything).
         and_return(search_results)
       @jira.count('key = TST-1').should == 5
     end
 
     it "returns a count of all issues when JQL is empty" do
       search_results = Jiraby::Entity.new({'total' => 15})
-      @jira.stub(:search).and_return(search_results)
+      @jira.stub(:post).and_return(search_results)
 
       @jira.count('').should == 15
     end
@@ -283,7 +248,7 @@ describe Jiraby::Jira do
 
     it "returns project data" do
       project = @jira.project('TST')
-      project.should be_a(Jiraby::Project)
+      project.should be_a Jiraby::Project
       # TODO: Verify attributes (requires fleshing out Project class)
     end
 

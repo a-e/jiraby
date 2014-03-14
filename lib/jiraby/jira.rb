@@ -174,34 +174,99 @@ module Jiraby
     #
     #
 
-    # Invoke the 'search' method to find issues matching the given JQL query,
-    # and return the response as an Entity.
+    # Find all issues matching the given JQL query, and return an
+    # `Enumerator` that yields each one as an Issue object.
+    # Each Issue is fetched from the REST API as needed.
     #
-    # @param [String] jql
+    # @param [String] jql_query
     #   JQL query for the issues you want to match
-    # @param [Integer, String] start_at
-    #   0-based index of the first issue to match
-    # @param [Integer, String] max_results
-    #   Maximum number of issues to return
-    # @param [Bool] expand_fields
-    #   True to include all navigable fields (default),
-    #   false to omit all issue fields.
     #
-    # @return [Jiraby::Entity]
+    # @return [Enumerator]
     #
-    def search(jql, start_at=0, max_results=50, expand_fields=true)
-      # The Jira `expand` parameter does not work correctly:
-      #   https://jira.atlassian.com/browse/JRA-30854
-      # so instead we'll just use the `fields` parameter.
-      fields = expand_fields ? ['*navigable'] : ['']
-
-      return self.post 'search', {
-        :jql => jql,
-        :startAt => start_at.to_i,
-        :maxResults => max_results.to_i,
-        :fields => fields
+    def search(jql_query)
+      params = {
+        :jql => jql_query,
       }
-    end #search
+      issues = self.enumerator(:post, 'search', params, 'issues')
+      return Enumerator.new do |e|
+        issues.each do |data|
+          e << Issue.new(self, data)
+        end
+      end
+    end
+
+    # Return an Enumerator yielding items returned by a REST method that
+    # accepts `startAt` and `maxResults` parameters. This allows you to
+    # iterate through large data sets
+    #
+    # For example, using the issue `search` method to look up all issues
+    # in project "FOO", then using `each` to iterate over them:
+    #
+    #   query = 'project=FOO order by key'
+    #   jira.enumerator(
+    #     :post, 'search', {:jql => query}, 'issues'
+    #   ).each do |issue|
+    #     puts "#{issue.key}: #{issue.fields.summary}"
+    #   end
+    #
+    # The output might be:
+    #
+    #   FOO-1: First issue in Foo project
+    #   FOO-2: Another issue
+    #   (...)
+    #   FOO-149: Penultimate issue
+    #   FOO-150: Last issue
+    #
+    # Below is a complete list of Jira REST API methods that accept `startAt`
+    # and `maxResults`.
+    #
+    # Returning Entity:
+    #   GET /dashboard => { 'dashboards' => [...], 'total' => N } (dashboards)
+    #   GET /search => { 'issues' => [...], 'total' => N } (issues)
+    #   POST /search => { 'issues' => [...], 'total' => N } (issues)
+    #
+    # Returning Array of Entity:
+    #   GET /user/assignable/multiProjectSearch => [...] (users)
+    #   GET /user/assignable/search => [...] (users)
+    #   GET /user/permission/search => [...] (users)
+    #   GET /user/search => [...] (users)
+    #   GET /user/viewissue/search => [...] (users)
+    #
+    def enumerator(method, path, params={}, list_key=nil)
+      max_results = 50
+      return Enumerator.new do |enum|
+        page = 0
+        more = true
+        while(more) do
+          paged_params = params.merge({
+            :startAt => page * max_results,
+            :maxResults => max_results
+          })
+          response = self.send(method, path, paged_params)
+
+          # Some methods (like 'search') return an Entity, with the list of
+          # items indexed by `list_key`.
+          if response.is_a?(Jiraby::Entity)
+            items = response[list_key]
+          # Others (like 'user/search') return an array of Entity.
+          elsif response.is_a?(Array)
+            items = response
+          else
+            raise RuntimeError.new("Unexpected data: #{response}")
+          end
+
+          items.to_a.each do |item|
+            enum << item
+          end
+
+          if items.to_a.count < max_results
+            more = false
+          else
+            page += 1
+          end
+        end # while(more)
+      end # Enumerator.new
+    end
 
     # Return the Issue with the given key.
     #
@@ -289,58 +354,15 @@ module Jiraby
     #   Number of issues matching the query
     #
     def count(jql='')
-      result = self.search(jql, 0, 1, false)
+      result = self.post 'search', {
+        :jql => jql,
+        :startAt => 0,
+        :maxResults => 1,
+        :fields => [''],
+      }
       return result.total
     end #count
 
-
-    # Return all of the issue keys matching the given JQL query.
-    #
-    # @param [String] jql
-    #   JQL query for the issues you want to match
-    #
-    # @return [Array<String>]
-    #   The keys of all issues matching the query
-    #
-    def issue_keys(jql='')
-      # Issue keys will be accumulated here
-      keys = []
-      # Fetch up to 50 issue keys at a time
-      max_results = 50
-      start = 0
-
-      # Get the first batch
-      results = search(jql, start, max_results, false)
-
-      # Until we've gotten all the issues, get successive batches
-      while results['total'] >= (start + results['issues'].length)
-        keys.concat(results['issues'].collect {|iss| iss['key']})
-        start += max_results
-        results = search(jql, start, max_results, false)
-      end
-
-      return keys
-    end #issue_keys
-
-
-    # Find all issues matching the given JQL query, and return an
-    # `Enumerator::Generator` that yields each one as an Issue object.
-    # Each Issue is fetched from the REST API as needed.
-    #
-    # @param [String] jql
-    #   JQL query for the issues you want to match
-    #
-    # @return [Enumerator::Generator]
-    #
-    def issues(jql='')
-      keys = issue_keys(jql)
-      issue_generator = Enumerator::Generator.new do |g|
-        for key in keys
-          g.yield issue(key)
-        end
-      end
-      return issue_generator
-    end #issues
 
     # Return a hash of {'field_id' => 'Field Name'} for all fields
     def field_mapping
@@ -351,19 +373,5 @@ module Jiraby
       return @_field_mapping
     end #field_mapping
 
-    # Iterate over paged items returned by a REST method
-    # that accepts `startAt` and `maxResults` parameters.
-    # Examples:
-    #   GET /dashboard
-    #   GET /search
-    #   POST /search
-    #   GET /user/assignable/multiProjectSearch
-    #   GET /user/assignable/search
-    # Note: Some of these methods return a plain JSON array,
-    # while others return a JSON object including the submitted
-    # `startAt` and `maxResults` values, as well as a `total` value.
-    def iterate
-      nil
-    end
   end # class Jira
 end # module Jiraby
