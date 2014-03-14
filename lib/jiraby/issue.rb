@@ -1,3 +1,4 @@
+require 'jiraby/exceptions'
 require 'jiraby/entity'
 
 module Jiraby
@@ -38,7 +39,7 @@ module Jiraby
       else
         _id = @jira.field_mapping.key(name_or_id)
         if _id.nil?
-          raise RuntimeError.new("Invalid field name or ID: #{name_or_id}")
+          raise InvalidField.new("Invalid field name or ID: #{name_or_id}")
         end
         return _id
       end
@@ -49,7 +50,7 @@ module Jiraby
     def has_field?(name_or_id)
       begin
         self.field_id(name_or_id)
-      rescue RuntimeError
+      rescue InvalidField
         return false
       else
         return true

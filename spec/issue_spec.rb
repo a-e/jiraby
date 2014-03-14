@@ -42,7 +42,7 @@ describe Jiraby::Issue do
         lambda do
           @issue['bogus']
         end.should raise_error(
-          RuntimeError, /Invalid field name or ID: bogus/)
+          Jiraby::InvalidField, /Invalid field name or ID: bogus/)
       end
     end
 
@@ -61,7 +61,7 @@ describe Jiraby::Issue do
         lambda do
           @issue['bogus'] = "Modified"
         end.should raise_error(
-          RuntimeError, /Invalid field name or ID: bogus/)
+          Jiraby::InvalidField, /Invalid field name or ID: bogus/)
       end
     end
 
