@@ -26,6 +26,8 @@ module Jiraby
   #     ...
   #
   class Jira
+    @@max_results = 50
+
     # Initialize a Jira instance at the given URL.
     # Call {#login} separately to log into Jira.
     #
@@ -233,7 +235,7 @@ module Jiraby
     #   GET /user/viewissue/search => [...] (users)
     #
     def enumerator(method, path, params={}, list_key=nil)
-      max_results = 50
+      max_results = @@max_results
       return Enumerator.new do |enum|
         page = 0
         more = true
