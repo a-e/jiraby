@@ -214,7 +214,24 @@ describe Jiraby::Jira do
       enum.should be_an Enumerator
     end
 
-    it "gets multiple pages by incrementing `startAt`"
+    it "gets multiple pages by incrementing `startAt`" do
+      page1 = (1..50).map { |num| Jiraby::Entity.new(:key => "TST-#{num}") }
+      page2 = (51..100).map { |num| Jiraby::Entity.new(:key => "TST-#{num}") }
+      page3 = (101..129).map { |num| Jiraby::Entity.new(:key => "TST-#{num}") }
+      jql = 'project=TST'
+      params = {:jql => jql, :maxResults => 50}
+      @jira.should_receive(:post).
+        with('search', params.merge(:startAt => 0)).
+        once.and_return(page1)
+      @jira.should_receive(:post).
+        with('search', params.merge(:startAt => 50)).
+        once.and_return(page2)
+      @jira.should_receive(:post).
+        with('search', params.merge(:startAt => 100)).
+        once.and_return(page3)
+
+      items = @jira.enumerator(:post, 'search', {:jql => jql}).to_a
+    end
 
     it "works when REST method returns an Entity" do
       entity = Jiraby::Entity.new(
@@ -224,18 +241,18 @@ describe Jiraby::Jira do
           {:key => 'TST-3'},
         ]
       )
-      @jira.stub(:get).and_return(entity)
+      @jira.stub(:post).and_return(entity)
 
-      enum = @jira.enumerator(:get, 'fake_search', {}, 'issues')
+      enum = @jira.enumerator(:post, 'fake_search', {}, 'issues')
       enum.count.should == 3
     end
 
     it "works when REST method returns an Array of Entity" do
       issue_keys = ['TST-1', 'TST-2', 'TST-3']
       entities = issue_keys.map {|key| Jiraby::Entity.new(:key => key)}
-      @jira.stub(:get).and_return(entities)
+      @jira.stub(:post).and_return(entities)
 
-      enum = @jira.enumerator(:get, 'fake_search')
+      enum = @jira.enumerator(:post, 'fake_search')
       enum.count.should == 3
       enum.to_a.should == entities
     end
@@ -246,20 +263,31 @@ describe Jiraby::Jira do
       #   SystemStackError: stack level too deep
       issue_keys = ['TST-1', 'TST-2', 'TST-3']
       entities = issue_keys.map {|key| Jiraby::Entity.new(:key => key)}
-      @jira.stub(:get).and_return(entities)
+      @jira.stub(:post).and_return(entities)
 
-      enum = @jira.enumerator(:get, 'fake_search')
+      enum = @jira.enumerator(:post, 'fake_search')
       enum.next.key.should == 'TST-1'
       enum.next.key.should == 'TST-2'
       enum.next.key.should == 'TST-3'
+    end
+
+    it "raises an exception if response is not Entity or Array" do
+      @jira.stub(:post).and_return('this string')
+      enum = @jira.enumerator(:post, 'fake_search')
+      lambda do
+        enum.first
+      end.should raise_error(RuntimeError, /Unexpected data: this string/)
     end
   end
 
   # TODO: Populate some more test issues in order to properly test this
   describe '#search' do
     before(:each) do
-      @jira.stub(:issue_keys => ['TST-1', 'TST-2', 'TST-3'])
       @jira.stub(:issue => Jiraby::Issue.new(@jira))
+    end
+
+    it "something or other" do
+      response = @jira.post(:search, {:jql => 'project=FOO'})
     end
 
     it "returns an Enumerator" do
