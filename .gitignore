@@ -5,3 +5,5 @@ coverage/*
 .ruby-gemset
 Gemfile.lock
 mockjira.pid
+doc/*
+.yardoc/*
