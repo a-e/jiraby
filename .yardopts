@@ -1,7 +1,6 @@
---readme docs/index.md
+--readme README.md
 --markup markdown
---no-highlight
-lib/jiraby/*.rb
+lib/**/*.rb
 -
 docs/index.md
 docs/usage.md

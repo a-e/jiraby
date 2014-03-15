@@ -20,6 +20,8 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'sinatra'
   s.add_development_dependency 'rakeup'
   s.add_development_dependency 'thin'
+  s.add_development_dependency 'yard'
+  s.add_development_dependency 'redcarpet'
 
   s.files = `git ls-files`.split("\n")
   s.require_path = 'lib'
