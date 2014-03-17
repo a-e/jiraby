@@ -14,6 +14,7 @@ Connect to Jira
 Assuming your JIRA site is at `http://jira.enterprise.com`, and you have
 an account `picard` with password `earlgrey`, you can connect like so:
 
+    ```ruby
     require 'jiraby'
 
     host = 'jira.enterprise.com:8080' # :PORT is optional
@@ -21,6 +22,7 @@ an account `picard` with password `earlgrey`, you can connect like so:
     password = 'earlgrey'
 
     jira = Jiraby::Jira.new(host, username, password)
+    ```
 
 [HTTP basic](http://en.wikipedia.org/wiki/Basic_access_authentication)
 authentication is used for all requests.
@@ -32,6 +34,7 @@ REST API
 Methods in the [JIRA REST API](https://docs.atlassian.com/jira/REST/6.2/) can be
 accessed directly using the `#get`, `#put`, `#post`, and `#delete` methods:
 
+    ```ruby
     jira.get 'serverInfo'                         # info about Jira server
     jira.get 'issue/TEST-1'                       # full details of TEST-1 issue
     jira.get 'field'                              # all fields, both System and Custom
@@ -44,6 +47,7 @@ accessed directly using the `#get`, `#put`, `#post`, and `#delete` methods:
     }
 
     jira.delete 'issue/TEST-1'                    # delete issue TEST-1
+    ```
 
 All REST methods return a `Jiraby::Entity` (a hash-like object built directly from
 the JSON response), or an `Array` of them (for those REST methods that return arrays).
@@ -54,11 +58,13 @@ Wrappers
 
 You can look up a Jira issue using the `#issue` method:
 
+    ```ruby
     issue = jira.issue('myproj-15')
     issue = jira.issue('MYPROJ-15') # case-insensitive
 
     issue.class
     #=> Jiraby::Issue
+    ```
 
 If you're interested, view the raw data returned from Jira:
 
@@ -75,33 +81,41 @@ If you're interested, view the raw data returned from Jira:
 
 Or use the higher-level methods provided by the `Issue` class:
 
+    ```ruby
     issue['foo']              # Value of field 'foo'; same as `issue.data.fields.foo`
     issue['foo'] = "Newval"   # Assign to field 'foo'
     issue.subtasks            # Array of issue keys for this issue's subtasks
     issue.is_subtask?         # True if issue is a sub-task of another issue
     issue.parent              # For subtasks, issue key of parent issue
     issue.is_assigned?        # True if issue is assigned
+    ```
 
 When modifying fields, the changes will appear in the `Issue` instance immediately:
 
+    ```ruby
     issue['summary'] = "Modified summary"
 
     issue['summary']
     #=> "Modified summary"
+    ```
 
 But these changes are not saved back to Jira until you call `#save!`. Before
 saving, you can check for pending changes:
 
+    ```ruby
     issue.pending_changes?
-    => true
+    #=> true
 
     issue.pending_changes
-    => {"summary" => "Modified summary"}
+    #=> {"summary" => "Modified summary"}
+    ```
 
 Then save the updates back to Jira:
 
+    ```ruby
     issue.save!
-    => true
+    #=> true
+    ```
 
 
 Copyright
