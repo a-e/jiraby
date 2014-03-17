@@ -4,7 +4,7 @@ Gem::Specification.new do |s|
   s.summary = "Jira-Ruby bridge"
   s.description = <<-EOS
   EOS
-  s.authors = ["Brian Moelk", "Eric Pierce"]
+  s.authors = ["Eric Pierce"]
   s.email = "wapcaplet88@gmail.com"
   s.homepage = "http://github.com/a-e/jiraby"
   s.platform = Gem::Platform::RUBY
