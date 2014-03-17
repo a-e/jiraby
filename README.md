@@ -50,8 +50,8 @@ All REST methods return a `Jiraby::Entity` (a hash-like object built directly fr
 the JSON response), or an `Array` of them (for those REST methods that return arrays).
 
 
-Wrappers
---------
+Issue wrapper
+-------------
 
 You can look up a Jira issue using the `#issue` method:
 
@@ -103,6 +103,78 @@ Then save the updates back to Jira:
 
     issue.save!
     # => true
+
+
+Enumerator wrapper
+------------------
+
+Several of Jira's REST API methods return their data in batches, based on the
+value of `startAt` and `maxResults` parameters, effectively breaking larger
+result sets into pages. Since it's likely you'll want to eventually fetch all
+pages of results, the `Jiraby::Jira` class can wrap such methods in an
+`Enumerator`, via the `#enumerator` method.
+
+For example, using the issue `search` method to look up all issues in project
+"FOO", then using `.each` to iterate over them:
+
+    query = 'project=FOO order by key'
+    jira.enumerator(
+      :post, 'search', {:jql => query}, 'issues'
+    ).each do |issue|
+      puts "#{issue.key}: #{issue.fields.summary}"
+    end
+
+The output might be:
+
+    FOO-1: First issue in Foo project
+    FOO-2: Another issue
+    (...)
+    FOO-149: Penultimate issue
+    FOO-150: Last issue
+
+Because the `search` method is so useful, it includes a wrapper of its own; all
+you need to provide is a JQL query:
+
+    issues = jira.search('project=FOO order by key')
+    # => #<Enumerator: ...>
+
+This `Enumerator` spits out `Issue` instances. Simply iterate over the issues
+using `.each`, `.map`, `.select` or their ilk, and each page will be fetched
+as it's needed, transparently:
+
+    issues.each do |issue|
+      puts "#{issue.key}: #{issue['summary']}"
+    end
+
+    issue_keys = issues.map { |issue| issue.key }
+
+    unassigned_subtasks = issues.select do |issue|
+      !issue.is_assigned? && issue.is_subtask?
+    end
+
+Using the `Enumerator` prevents having to load the entire list of issues into
+memory at once, but can mean doing a lot of requests to Jira. If you plan to
+iterate through the issues more than once and would like to avoid repeated
+requests to the REST API, you could convert the `Enumerator` to an `Array`:
+
+    issues_array = issues.to_a
+
+Below is a complete list of Jira REST API methods that accept `startAt`
+and `maxResults`.
+
+Returning `Jiraby::Entity`:
+
+    GET /dashboard => { 'dashboards' => [...], 'total' => N } (dashboards)
+    GET /search => { 'issues' => [...], 'total' => N } (issues)
+    POST /search => { 'issues' => [...], 'total' => N } (issues)
+
+Returning `Array` of `Jiraby::Entity`:
+
+    GET /user/assignable/multiProjectSearch => [...] (users)
+    GET /user/assignable/search => [...] (users)
+    GET /user/permission/search => [...] (users)
+    GET /user/search => [...] (users)
+    GET /user/viewissue/search => [...] (users)
 
 
 Copyright

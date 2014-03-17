@@ -136,40 +136,19 @@ module Jiraby
 
     # Return an Enumerator yielding items returned by a REST method that
     # accepts `startAt` and `maxResults` parameters. This allows you to
-    # iterate through large data sets
+    # iterate through large data sets.
     #
-    # For example, using the issue `search` method to look up all issues
-    # in project "FOO", then using `each` to iterate over them:
-    #
-    #     query = 'project=FOO order by key'
-    #     jira.enumerator(
-    #       :post, 'search', {:jql => query}, 'issues'
-    #     ).each do |issue|
-    #       puts "#{issue.key}: #{issue.fields.summary}"
-    #     end
-    #
-    # The output might be:
-    #
-    #   FOO-1: First issue in Foo project
-    #   FOO-2: Another issue
-    #   (...)
-    #   FOO-149: Penultimate issue
-    #   FOO-150: Last issue
-    #
-    # Below is a complete list of Jira REST API methods that accept `startAt`
-    # and `maxResults`.
-    #
-    # Returning Entity:
-    #   GET /dashboard => { 'dashboards' => [...], 'total' => N } (dashboards)
-    #   GET /search => { 'issues' => [...], 'total' => N } (issues)
-    #   POST /search => { 'issues' => [...], 'total' => N } (issues)
-    #
-    # Returning Array of Entity:
-    #   GET /user/assignable/multiProjectSearch => [...] (users)
-    #   GET /user/assignable/search => [...] (users)
-    #   GET /user/permission/search => [...] (users)
-    #   GET /user/search => [...] (users)
-    #   GET /user/viewissue/search => [...] (users)
+    # @param [String,Symbol] method
+    #   HTTP request method to use (`:get` or `:post`)
+    # @param [String] path
+    #   Relative path to the REST method (such as `user/search`)
+    # @param [Hash] params
+    #   GET or POST parameters to submit (depending on which method
+    #   and path you're requesting)
+    # @param [String] list_key
+    #   For REST methods returning an array embedded in an object
+    #   (like `search` and `dashboard`), the attribute name where
+    #   the array of things is stored.
     #
     def enumerator(method, path, params={}, list_key=nil)
       max_results = @@max_results
