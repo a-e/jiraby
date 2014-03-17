@@ -3,6 +3,8 @@ Gem::Specification.new do |s|
   s.version = "0.0.1"
   s.summary = "Jira-Ruby bridge"
   s.description = <<-EOS
+    Jiraby is a Ruby wrapper for the JIRA REST API,
+    supporting Jira 6.x.
   EOS
   s.authors = ["Eric Pierce"]
   s.email = "wapcaplet88@gmail.com"
