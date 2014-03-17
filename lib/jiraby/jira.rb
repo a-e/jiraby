@@ -31,24 +31,24 @@ module Jiraby
     #
     # TODO: Handle the case where the wrong API version is used for a given
     # Jira instance (should give 404s when resources are requested)
+    #
     def initialize(url, username, password, api_version='2')
       if !known_api_versions.include?(api_version)
         raise ArgumentError.new("Unknown Jira API version: #{api_version}")
       end
-      @url = normalize_url(url)
+
+      # Prepend http:// and remove trailing slashes
+      url = "http://#{url}" if url !~ /https:|http:/
+      url.gsub!(/\/+$/, '')
+      @url = url
+
       @credentials = {:user => username, :password => password}
       @api_version = api_version
       @_field_mapping = nil
 
+      # All REST API access is done through the @rest attribute
       @rest = Jiraby::JSONResource.new(base_url, @credentials)
     end #initialize
-
-    # Normalize the given URL
-    def normalize_url(url)
-      url = "http://#{url}" if url !~ /https:|http:/
-      url.gsub!(/\/+$/, '')
-      return url
-    end
 
     attr_reader :url, :api_version, :rest
 
@@ -113,13 +113,6 @@ module Jiraby
       @rest[path].post data
     end
 
-    #
-    #
-    # TODO: Hack out everything below this and move it to higher-level
-    # abstractions. Keep the Jira class low-level.
-    #
-    #
-
     # Find all issues matching the given JQL query, and return an
     # `Enumerator` that yields each one as an Issue object.
     # Each Issue is fetched from the REST API as needed.
@@ -148,12 +141,12 @@ module Jiraby
     # For example, using the issue `search` method to look up all issues
     # in project "FOO", then using `each` to iterate over them:
     #
-    #   query = 'project=FOO order by key'
-    #   jira.enumerator(
-    #     :post, 'search', {:jql => query}, 'issues'
-    #   ).each do |issue|
-    #     puts "#{issue.key}: #{issue.fields.summary}"
-    #   end
+    #     query = 'project=FOO order by key'
+    #     jira.enumerator(
+    #       :post, 'search', {:jql => query}, 'issues'
+    #     ).each do |issue|
+    #       puts "#{issue.key}: #{issue.fields.summary}"
+    #     end
     #
     # The output might be:
     #
@@ -313,7 +306,7 @@ module Jiraby
     end #count
 
 
-    # Return a hash of {'field_id' => 'Field Name'} for all fields
+    # Return a hash of 'field_id' => 'Field Name' for all fields
     def field_mapping
       if @_field_mapping.nil?
         ids_and_names = self.get('field').collect { |f| [f.id, f.name] }
