@@ -35,17 +35,20 @@ module Jiraby
       if !known_api_versions.include?(api_version)
         raise ArgumentError.new("Unknown Jira API version: #{api_version}")
       end
-      if url =~ /https:|http:/
-        @url = url
-      else
-        @url = "http://#{url}"
-      end
+      @url = normalize_url(url)
       @credentials = {:user => username, :password => password}
       @api_version = api_version
       @_field_mapping = nil
 
       @rest = Jiraby::JSONResource.new(base_url, @credentials)
     end #initialize
+
+    # Normalize the given URL
+    def normalize_url(url)
+      url = "http://#{url}" if url !~ /https:|http:/
+      url.gsub!(/\/+$/, '')
+      return url
+    end
 
     attr_reader :url, :api_version, :rest
 
