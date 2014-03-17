@@ -7,7 +7,7 @@ versions 6.2 and up.
 
 [Full documentation is on rdoc.info](http://rubydoc.info/github/a-e/jiraby/master/frames).
 
-[![Build Status](https://secure.travis-ci.org/a-e/jiraby.png?branch=master)](http://travis-ci.org/a-e/jiraby)
+[![Build Status](https://secure.travis-ci.org/a-e/jiraby.png?branch=dev)](http://travis-ci.org/a-e/jiraby)
 
 Connect to Jira
 ---------------
