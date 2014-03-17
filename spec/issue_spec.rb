@@ -7,7 +7,7 @@ describe Jiraby::Issue do
       'description' => 'Description',
       'customfield_10001' => 'Custom Field',
     }
-    @jira = Jiraby::Jira.new('jira.example.com')
+    @jira = Jiraby::Jira.new('jira.example.com', 'username', 'password')
     @jira.stub(:field_mapping => @field_mapping)
     @issue = Jiraby::Issue.new(@jira, json_data('issue_10002.json'))
   end
@@ -49,12 +49,12 @@ describe Jiraby::Issue do
     describe "#[]=" do
       it "accepts field `id`" do
         @issue['description'] = "Foobar"
-        @issue.updates['description'].should == "Foobar"
+        @issue.pending_changes['description'].should == "Foobar"
       end
 
       it "accepts field `name`" do
         @issue['Custom Field'] = "Modified"
-        @issue.updates[@field_mapping.key('Custom Field')].should == "Modified"
+        @issue.pending_changes[@field_mapping.key('Custom Field')].should == "Modified"
       end
 
       it "raises an exception on invalid field name" do
@@ -114,14 +114,14 @@ describe Jiraby::Issue do
       end
     end
 
-    describe "#modified?" do
+    describe "#pending_changes?" do
       it "returns true if updates are pending" do
         @issue["description"] = "Foo"
-        @issue.modified?.should be_true
+        @issue.pending_changes?.should be_true
       end
 
       it "returns false if no updates are pending" do
-        @issue.modified?.should be_false
+        @issue.pending_changes?.should be_false
       end
     end
 
@@ -129,7 +129,7 @@ describe Jiraby::Issue do
       it "sends a PUT request to Jira with updates" do
         @issue['description'] = "Modified description"
         expect_fields = {
-          'fields' => @issue.updates
+          'fields' => @issue.pending_changes
         }
         @jira.should_receive(:put).
           with("issue/#{@issue.key}", expect_fields)
@@ -147,12 +147,14 @@ describe Jiraby::Issue do
         @issue.data.fields.description.should == modified_description
       end
 
-      it "resets modified status" do
+      it "resets pending_changes" do
         @jira.stub(:put => nil)
         @issue['description'] = "Modified description"
-        @issue.modified?.should be_true
+        @issue.pending_changes.should_not be_empty
+        @issue.pending_changes?.should be_true
         @issue.save!
-        @issue.modified?.should be_false
+        @issue.pending_changes.should be_empty
+        @issue.pending_changes?.should be_false
       end
     end
 

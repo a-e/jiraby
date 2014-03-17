@@ -7,10 +7,10 @@ module Jiraby
       @jira = jira_instance
       @data = Entity.new(json_data)
       # Modifications are stored here until #save is called
-      @updates = Entity.new
+      @pending_changes = Entity.new
     end
 
-    attr_reader :jira, :data, :updates
+    attr_reader :jira, :data, :pending_changes
 
     # Return this issue's `key`
     def key
@@ -19,13 +19,13 @@ module Jiraby
 
     # Set field `name_or_id` equal to `value`.
     def []=(name_or_id, value)
-      @updates[self.field_id(name_or_id)] = value
+      @pending_changes[self.field_id(name_or_id)] = value
     end
 
     # Return the value in field `name_or_id`.
     def [](name_or_id)
       _id = self.field_id(name_or_id)
-      return @updates[_id] || @data.fields[_id]
+      return @pending_changes[_id] || @data.fields[_id]
     end
 
     # Return a field ID, given a name or ID. `name_or_id` may be the field's ID
@@ -91,18 +91,18 @@ module Jiraby
     end
 
     # Return true if this issue has been modified since saving.
-    def modified?
-      return !@updates.empty?
+    def pending_changes?
+      return !@pending_changes.empty?
     end
 
     # Save this issue by sending a PUT request.
     # Return true if save was successful.
     def save!
-      json_data = {'fields' => @updates}
+      json_data = {'fields' => @pending_changes}
       # TODO: Handle failed save
       @jira.put("issue/#{@data.key}", json_data)
-      @data.fields.merge!(@updates)
-      @updates = Entity.new
+      @data.fields.merge!(@pending_changes)
+      @pending_changes = Entity.new
       return true
     end
   end

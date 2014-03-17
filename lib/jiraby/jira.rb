@@ -14,32 +14,24 @@ require 'jiraby/json_resource'
 
 module Jiraby
   # Wrapper for Jira
-  #
-  # Usage:
-  #
-  #     jira = Jiraby::Jira.new("localhost:8080")
-  #     jira.login('admin', 'password')
-  #
-  # Then:
-  #
-  #     jira.get('issue/TST-1')
-  #     ...
-  #
   class Jira
     @@max_results = 50
 
     # Initialize a Jira instance at the given URL.
-    # Call {#login} separately to log into Jira.
     #
     # @param [String] url
     #   Full URL of the JIRA instance to connect to. If this does not begin
     #   with http: or https:, then http:// is assumed.
+    # @param [String] username
+    #   Jira username
+    # @param [String] password
+    #   Jira password
     # @param [String] api_version
     #   The API version to use. For now, only '2' is supported.
     #
     # TODO: Handle the case where the wrong API version is used for a given
     # Jira instance (should give 404s when resources are requested)
-    def initialize(url, api_version='2')
+    def initialize(url, username, password, api_version='2')
       if !known_api_versions.include?(api_version)
         raise ArgumentError.new("Unknown Jira API version: #{api_version}")
       end
@@ -48,10 +40,11 @@ module Jiraby
       else
         @url = "http://#{url}"
       end
+      @credentials = {:user => username, :password => password}
       @api_version = api_version
-      @auth = Jiraby::JSONResource.new(auth_url)
-      @rest = Jiraby::JSONResource.new(base_url)
       @_field_mapping = nil
+
+      @rest = Jiraby::JSONResource.new(base_url, @credentials)
     end #initialize
 
     attr_reader :url, :api_version, :rest
@@ -72,58 +65,6 @@ module Jiraby
     def base_url
       "#{@url}/rest/api/#{@api_version}"
     end
-
-    # Login to Jira using the given username/password.
-    #
-    # @param [String] username
-    #   Log in as this user
-    # @param [String] password
-    #   Password for the given username
-    #
-    # @return [Bool]
-    #   `true` if login was successful, `false` otherwise
-    #
-    def login(username, password)
-      credentials = {:username => username, :password => password}
-      # TODO: Factor this out into Jiraby::Rest methods
-      begin
-        response = @auth.post credentials
-      # TODO: Somehow log or otherwise indicate the cause of failure here
-      rescue RestClient::Exception
-        return false
-      rescue Errno::ECONNREFUSED
-        return false
-      else
-        if response['session']
-          session = {response['session']['name'] => response['session']['value']}
-          @rest = JSONResource.new(
-            base_url, :headers => {:cookies => session}
-          )
-          return true
-        # TODO: Somehow log or otherwise indicate the cause of failure here
-        else
-          return false
-        end
-      end
-    end #login
-
-
-    # Log out of Jira
-    def logout
-      begin
-        @auth.delete
-      # TODO: Somehow log or otherwise indicate the cause of failure here
-      rescue RestClient::Exception
-        return false
-      rescue Errno::ECONNREFUSED
-        return false
-      else
-        @rest = Jiraby::JSONResource.new(base_url)
-        return true
-      end
-    end #logout
-
-
 
     # Raise an exception if the current API version is one of those listed.
     #

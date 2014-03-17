@@ -3,117 +3,63 @@ require_relative 'data/jira_issues'
 
 describe Jiraby::Jira do
   before(:each) do
-    @jira = Jiraby::Jira.new('localhost:9292')
+    @jira = Jiraby::Jira.new('localhost:9292', 'username', 'password')
     todo_stub = RuntimeError.new("RestClient call needs a stub")
     RestClient.stub(:get).and_raise(todo_stub)
     RestClient.stub(:post).and_raise(todo_stub)
   end
 
   describe '#initialize' do
+    before(:each) do
+    end
+
     it "raises an error for unknown API version" do
       lambda do
-        Jiraby::Jira.new('jira.example.com', '1.0')
+        Jiraby::Jira.new('jira.example.com', nil, nil, '1.0')
       end.should raise_error
     end
 
     it "accepts valid API versions" do
-      jira = Jiraby::Jira.new('jira.example.com', '2')
+      jira = Jiraby::Jira.new('jira.example.com', nil, nil, '2')
       jira.api_version.should == '2'
     end
 
     it "accepts URL beginning with http://" do
-      jira = Jiraby::Jira.new('http://jira.example.com')
+      jira = Jiraby::Jira.new('http://jira.example.com', nil, nil)
       jira.url.should == 'http://jira.example.com'
     end
 
     it "accepts URL beginning with https://" do
-      jira = Jiraby::Jira.new('https://jira.example.com')
+      jira = Jiraby::Jira.new('https://jira.example.com', nil, nil)
       jira.url.should == 'https://jira.example.com'
     end
 
     it "prepends http:// to the URL if needed" do
-      jira = Jiraby::Jira.new('jira.example.com')
+      jira = Jiraby::Jira.new('jira.example.com', nil, nil)
       jira.url.should == 'http://jira.example.com'
     end
   end #initialize
 
   describe '#auth_url' do
     it "returns the full REST authorization URL" do
-      jira = Jiraby::Jira.new('jira.example.com')
+      jira = Jiraby::Jira.new('jira.example.com', nil, nil)
       jira.auth_url.should == 'http://jira.example.com/rest/auth/1/session'
     end
   end #auth_url
 
   describe '#not_implemented_in' do
     it "raises an exception when API version is one of those listed" do
-      jira = Jiraby::Jira.new('jira.example.com', '2')
+      jira = Jiraby::Jira.new('jira.example.com', nil, nil, '2')
       lambda do
         jira.not_implemented_in('Issue creation', '2')
       end.should raise_error
     end
 
     it "returns nil when API version is not one of those listed" do
-      jira = Jiraby::Jira.new('jira.example.com', '2')
+      jira = Jiraby::Jira.new('jira.example.com', nil, nil, '2')
       jira.not_implemented_in('Issue creation', '2.0.alpha1').should be_nil
     end
   end #not_implemented_in
-
-  context "Sessions" do
-    describe '#login' do
-      it "returns true on successful login" do
-        @jira.login('user', 'password').should be_true
-      end
-
-      context "returns false" do
-        it "when given invalid credentials" do
-          @jira.login('user', 'badpassword').should be_false
-        end
-
-        it "when RestClient::Exception occurs" do
-          @jira.instance_eval do
-            @auth.stub(:post).and_raise(RestClient::Exception)
-          end
-          @jira.login('user', 'password').should be_false
-        end
-
-        it "when Errno::ECONNREFUSED occurs" do
-          @jira.instance_eval do
-            @auth.stub(:post).and_raise(Errno::ECONNREFUSED)
-          end
-          @jira.login('user', 'password').should be_false
-        end
-      end
-    end #login
-
-    describe '#logout' do
-      before(:each) do
-      end
-
-      it "returns true on successful logout" do
-        #RestClient.stub(:post).and_return(@login_response_json)
-        @jira.login('user', 'user')
-        #RestClient.stub(:delete).and_return('{}')
-        @jira.instance_eval do
-          @auth.stub(:delete).and_return('{}')
-        end
-        @jira.logout.should be_true
-      end
-
-      it "returns false on failed logout" do
-        @jira.instance_eval do
-          @auth.stub(:delete).and_raise(RestClient::Unauthorized)
-        end
-        @jira.logout.should be_false
-      end
-
-      it "returns false when Jira connection can't be made" do
-        @jira.instance_eval do
-          @auth.stub(:delete).and_raise(Errno::ECONNREFUSED)
-        end
-        @jira.logout.should be_false
-      end
-    end #logout
-  end # Sessions
 
   context "REST wrappers" do
     before(:each) do
