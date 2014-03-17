@@ -3,135 +3,128 @@ require_relative 'data/jira_issues'
 
 describe Jiraby::Jira do
   before(:each) do
-    @jira = Jiraby::Jira.new('localhost:9292')
+    @jira = Jiraby::Jira.new('localhost:9292', 'username', 'password')
     todo_stub = RuntimeError.new("RestClient call needs a stub")
     RestClient.stub(:get).and_raise(todo_stub)
     RestClient.stub(:post).and_raise(todo_stub)
   end
 
   describe '#initialize' do
+    before(:each) do
+    end
+
     it "raises an error for unknown API version" do
       lambda do
-        Jiraby::Jira.new('jira.example.com', '1.0')
+        Jiraby::Jira.new('jira.example.com', nil, nil, '1.0')
       end.should raise_error
     end
 
     it "accepts valid API versions" do
-      jira = Jiraby::Jira.new('jira.example.com', '2')
+      jira = Jiraby::Jira.new('jira.example.com', nil, nil, '2')
       jira.api_version.should == '2'
     end
 
     it "accepts URL beginning with http://" do
-      jira = Jiraby::Jira.new('http://jira.example.com')
+      jira = Jiraby::Jira.new('http://jira.example.com', nil, nil)
       jira.url.should == 'http://jira.example.com'
     end
 
     it "accepts URL beginning with https://" do
-      jira = Jiraby::Jira.new('https://jira.example.com')
+      jira = Jiraby::Jira.new('https://jira.example.com', nil, nil)
       jira.url.should == 'https://jira.example.com'
     end
 
     it "prepends http:// to the URL if needed" do
-      jira = Jiraby::Jira.new('jira.example.com')
+      jira = Jiraby::Jira.new('jira.example.com', nil, nil)
       jira.url.should == 'http://jira.example.com'
     end
   end #initialize
 
   describe '#auth_url' do
     it "returns the full REST authorization URL" do
-      jira = Jiraby::Jira.new('jira.example.com')
+      jira = Jiraby::Jira.new('jira.example.com', nil, nil)
       jira.auth_url.should == 'http://jira.example.com/rest/auth/1/session'
     end
   end #auth_url
 
   describe '#not_implemented_in' do
     it "raises an exception when API version is one of those listed" do
-      jira = Jiraby::Jira.new('jira.example.com', '2')
+      jira = Jiraby::Jira.new('jira.example.com', nil, nil, '2')
       lambda do
         jira.not_implemented_in('Issue creation', '2')
       end.should raise_error
     end
 
     it "returns nil when API version is not one of those listed" do
-      jira = Jiraby::Jira.new('jira.example.com', '2')
+      jira = Jiraby::Jira.new('jira.example.com', nil, nil, '2')
       jira.not_implemented_in('Issue creation', '2.0.alpha1').should be_nil
     end
   end #not_implemented_in
 
-  context "Sessions" do
-    describe '#login' do
-      it "returns true on successful login" do
-        @jira.login('user', 'password').should be_true
-      end
-
-      context "returns false" do
-        it "when given invalid credentials" do
-          @jira.login('user', 'badpassword').should be_false
-        end
-
-        it "when RestClient::Exception occurs" do
-          @jira.instance_eval do
-            @auth.stub(:post).and_raise(RestClient::Exception)
-          end
-          @jira.login('user', 'password').should be_false
-        end
-
-        it "when Errno::ECONNREFUSED occurs" do
-          @jira.instance_eval do
-            @auth.stub(:post).and_raise(Errno::ECONNREFUSED)
-          end
-          @jira.login('user', 'password').should be_false
-        end
-      end
-    end #login
-
-    describe '#logout' do
-      before(:each) do
-      end
-
-      it "returns true on successful logout" do
-        #RestClient.stub(:post).and_return(@login_response_json)
-        @jira.login('user', 'user')
-        #RestClient.stub(:delete).and_return('{}')
-        @jira.instance_eval do
-          @auth.stub(:delete).and_return('{}')
-        end
-        @jira.logout.should be_true
-      end
-
-      it "returns false on failed logout" do
-        @jira.instance_eval do
-          @auth.stub(:delete).and_raise(RestClient::Unauthorized)
-        end
-        @jira.logout.should be_false
-      end
-
-      it "returns false when Jira connection can't be made" do
-        @jira.instance_eval do
-          @auth.stub(:delete).and_raise(Errno::ECONNREFUSED)
-        end
-        @jira.logout.should be_false
-      end
-    end #logout
-  end # Sessions
-
   context "REST wrappers" do
+    before(:each) do
+      @path = 'fake/path'
+      @resource = Jiraby::JSONResource.new(@jira.base_url)
+      @jira.rest.stub(:[]).with(@path).and_return(@resource)
+    end
+
+    describe "#_path_with_query" do
+      it "returns path as-is if query is empty" do
+        @jira._path_with_query("user/search").should == "user/search"
+      end
+
+      it "returns path with query parameters appended" do
+        path = "user/search"
+        query = {:username => "someone", :startAt => 0, :maxResults => 10}
+        expect_path = "user/search?username=someone&startAt=0&maxResults=10"
+        @jira._path_with_query(path, query).should == expect_path
+      end
+    end
+
     describe "#get" do
       it "sends a GET request" do
-        # FIXME: This is kind of a mess...
-        resource = Jiraby::JSONResource.new(@jira.base_url)
-        @jira.instance_eval do
-          @rest.should_receive(:[]).with('issue/TST-1').and_return(resource)
-        end
-        resource.should_receive(:get)
-        @jira.get('issue/TST-1')
+        @resource.should_receive(:get)
+        @jira.get(@path)
+      end
+    end
+
+    describe "#put" do
+      it "sends a PUT request" do
+        @resource.should_receive(:put)
+        @jira.put(@path, {})
+      end
+    end
+
+    describe "#post" do
+      it "sends a POST request" do
+        @resource.should_receive(:post)
+        @jira.post(@path, {})
+      end
+    end
+
+    describe "#delete" do
+      it "sends a DELETE request" do
+        @resource.should_receive(:delete)
+        @jira.delete(@path)
       end
     end
   end # REST wrappers
 
   describe '#issue' do
     it "returns an Issue for valid issue key" do
-      @jira.issue('TST-1').should be_an_instance_of(Jiraby::Issue)
+      @jira.issue('TST-1').should be_a Jiraby::Issue
+    end
+
+    it "raises ArgumentError if key is nil" do
+      lambda do
+        @jira.issue(nil)
+      end.should raise_error(ArgumentError, /Issue key is required/)
+    end
+
+    it "raises ArgumentError if key is empty" do
+      lambda do
+        @jira.issue(' ')
+      end.should raise_error(ArgumentError, /Issue key is required/)
     end
 
     it "raises IssueNotFound for invalid issue key" do
@@ -161,82 +154,113 @@ describe Jiraby::Jira do
     end
   end #create_issue
 
-  describe '#search' do
-    it "returns an array of Issue instances" do
-      issues = @jira.search('', 0, 1)
-      issues.should be_an(Array)
-      issues.each do |issue|
-        issue.should be_a(Jiraby::Issue)
-      end
+  describe "#enumerator" do
+    it "returns an Enumerator instance" do
+      enum = @jira.enumerator(:get, 'user/search')
+      enum.should be_an Enumerator
     end
 
-    it "limits results to max_results" do
-      [1, 5, 10].each do |max_results|
-        expect_params = {:jql => '', :startAt => 0, :maxResults => max_results}
-        json = @jira.search('', 0, max_results)
+    it "gets multiple pages by incrementing `startAt`" do
+      page1 = (1..50).map { |num| Jiraby::Entity.new(:key => "TST-#{num}") }
+      page2 = (51..100).map { |num| Jiraby::Entity.new(:key => "TST-#{num}") }
+      page3 = (101..129).map { |num| Jiraby::Entity.new(:key => "TST-#{num}") }
+      jql = 'project=TST'
+      params = {:jql => jql, :maxResults => 50}
+      @jira.should_receive(:post).
+        with('search', params.merge(:startAt => 0)).
+        once.and_return(page1)
+      @jira.should_receive(:post).
+        with('search', params.merge(:startAt => 50)).
+        once.and_return(page2)
+      @jira.should_receive(:post).
+        with('search', params.merge(:startAt => 100)).
+        once.and_return(page3)
+
+      items = @jira.enumerator(:post, 'search', {:jql => jql}).to_a
+    end
+
+    it "works when REST method returns an Entity" do
+      entity = Jiraby::Entity.new(
+        :issues => [
+          {:key => 'TST-1'},
+          {:key => 'TST-2'},
+          {:key => 'TST-3'},
+        ]
+      )
+      @jira.stub(:post).and_return(entity)
+
+      enum = @jira.enumerator(:post, 'fake_search', {}, 'issues')
+      enum.count.should == 3
+    end
+
+    it "works when REST method returns an Array of Entity" do
+      issue_keys = ['TST-1', 'TST-2', 'TST-3']
+      entities = issue_keys.map {|key| Jiraby::Entity.new(:key => key)}
+      @jira.stub(:post).and_return(entities)
+
+      enum = @jira.enumerator(:post, 'fake_search')
+      enum.count.should == 3
+      enum.to_a.should == entities
+    end
+
+    it "supports the .next method" do
+      # FIXME: For some reason, .next works fine in this test, but when
+      # connected to an actual Jira instance, it blows up with
+      #   SystemStackError: stack level too deep
+      issue_keys = ['TST-1', 'TST-2', 'TST-3']
+      entities = issue_keys.map {|key| Jiraby::Entity.new(:key => key)}
+      @jira.stub(:post).and_return(entities)
+
+      enum = @jira.enumerator(:post, 'fake_search')
+      enum.next.key.should == 'TST-1'
+      enum.next.key.should == 'TST-2'
+      enum.next.key.should == 'TST-3'
+    end
+
+    it "raises an exception if response is not Entity or Array" do
+      @jira.stub(:post).and_return('this string')
+      enum = @jira.enumerator(:post, 'fake_search')
+      lambda do
+        enum.first
+      end.should raise_error(RuntimeError, /Unexpected data: this string/)
+    end
+  end
+
+  # TODO: Populate some more test issues in order to properly test this
+  describe '#search' do
+    before(:each) do
+      @jira.stub(:issue => Jiraby::Issue.new(@jira))
+    end
+
+    it "something or other" do
+      response = @jira.post(:search, {:jql => 'project=FOO'})
+    end
+
+    it "returns an Enumerator" do
+      require 'enumerator'
+      @jira.search('project=TST').should be_an Enumerator
+    end
+
+    it "yields one Issue instance for each issue key" do
+      @jira.search('project=TST').each do |issue|
+        issue.should be_a Jiraby::Issue
       end
     end
   end #search
 
-  # TODO: Populate some more test issues in order to properly test this
-  describe '#issue_keys' do
-    before(:each) do
-    end
-
-    it "returns a list of issue keys" do
-      search_results = {
-        'total' => 3,
-        'issues' => [
-          {'key' => 'TST-1'},
-          {'key' => 'TST-2'},
-          {'key' => 'TST-3'},
-        ]
-      }
-      @jira.stub(:search).and_return(search_results)
-
-      @jira.issue_keys('project = TEST').should == ['TST-1', 'TST-2', 'TST-3']
-    end
-
-    it "combines multiple pages of results into a single list"
-  end #issue_keys
-
-  # TODO: Populate some more test issues in order to properly test this
-  describe '#issues' do
-    before(:each) do
-      @jira.stub(:issue_keys => ['TST-1', 'TST-2', 'TST-3'])
-      @jira.stub(:issue => Jiraby::Issue.new(@jira))
-    end
-
-    it "returns a Generator" do
-      require 'enumerator'
-      @jira.issues.should be_an_instance_of(Enumerator::Generator)
-    end
-
-    it "yields one Issue instance for each issue key" do
-      @jira.issues.each do |issue|
-        issue.should be_a(Jiraby::Issue)
-      end
-    end
-
-    it "uses #issue_keys to find issues matching a JQL query" do
-      jql = "key = TST-1"
-      @jira.should_receive(:issue_keys).with(jql).and_return([])
-      @jira.issues(jql)
-    end
-  end #issues
-
+  # FIXME: Test this using the fake Jira instance
   describe '#count' do
     it "returns the number of issues matching a JQL query" do
-      search_results = {'total' => 5}
-      @jira.should_receive(:search).
-        with('key = TST-1', anything, anything).
+      search_results = Jiraby::Entity.new({'total' => 5})
+      @jira.should_receive(:post).
+        with('search', anything).
         and_return(search_results)
       @jira.count('key = TST-1').should == 5
     end
 
     it "returns a count of all issues when JQL is empty" do
-      search_results = {'total' => 15}
-      @jira.stub(:search).and_return(search_results)
+      search_results = Jiraby::Entity.new({'total' => 15})
+      @jira.stub(:post).and_return(search_results)
 
       @jira.count('').should == 15
     end
@@ -250,7 +274,7 @@ describe Jiraby::Jira do
 
     it "returns project data" do
       project = @jira.project('TST')
-      project.should be_a(Jiraby::Project)
+      project.should be_a Jiraby::Project
       # TODO: Verify attributes (requires fleshing out Project class)
     end
 

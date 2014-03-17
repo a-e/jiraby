@@ -1,22 +1,28 @@
 require 'rake'
 
-default_host = "localhost:8080"
+desc "Pry session with the given Jira configuration file (YAML)"
+task :pry, :config_yml do |t, args|
+  if !args.config_yml
+    puts "Usage: rake pry[config.yml]"
+    puts "Where config.yml looks something like:"
+    puts "  url: 'jira.enterprise.com'"
+    puts "  username: 'picard'"
+    puts "  password: 'earlgrey'"
+    exit
+  end
 
-desc "Start a pry session with the given Jira host (default #{default_host})"
-task :pry, [:jira_host] do |t, args|
   require 'pry'
   require 'jiraby'
-  if !args.jira_host
-    puts "No hostname given; using #{default_host}"
-    jira_host = default_host
-  else
-    jira_host = args.jira_host
-  end
-  jira_url = "http://#{jira_host}"
-  puts "Connecting to Jira at #{jira_url}"
-  jira = Jiraby::Jira.new(jira_url)
-  jira.login('admin', 'admin')
-  issue = jira.issue('TEST-1')
+  require 'yaml'
+
+  config = YAML.load(File.open(args.config_yml))
+
+  jira = Jiraby::Jira.new(
+    config['url'],
+    config['username'],
+    config['password']
+  )
+
   binding.pry
 end
 

@@ -14,6 +14,7 @@ require 'jiraby'
 #MOCKAPP_DIR = File.join(TEST_DIR, 'mockapp')
 #require File.join(MOCKAPP_DIR, 'jira')
 
+# Parse a given file as JSON and return a Hash
 def json_data(json_filename)
   data = File.read(File.join(DATA_DIR, json_filename))
   return Yajl::Parser.parse(data)

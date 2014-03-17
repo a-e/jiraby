@@ -14,44 +14,43 @@ require 'jiraby/json_resource'
 
 module Jiraby
   # Wrapper for Jira
-  #
-  # Usage:
-  #
-  #     jira = Jiraby::Jira.new("localhost:8080")
-  #     jira.login('admin', 'password')
-  #
-  # Then:
-  #
-  #     jira.get('issue/TST-1')
-  #     ...
-  #
   class Jira
+    @@max_results = 50
+
     # Initialize a Jira instance at the given URL.
-    # Call {#login} separately to log into Jira.
     #
     # @param [String] url
     #   Full URL of the JIRA instance to connect to. If this does not begin
     #   with http: or https:, then http:// is assumed.
+    # @param [String] username
+    #   Jira username
+    # @param [String] password
+    #   Jira password
     # @param [String] api_version
     #   The API version to use. For now, only '2' is supported.
     #
     # TODO: Handle the case where the wrong API version is used for a given
     # Jira instance (should give 404s when resources are requested)
-    def initialize(url, api_version='2')
+    #
+    def initialize(url, username, password, api_version='2')
       if !known_api_versions.include?(api_version)
         raise ArgumentError.new("Unknown Jira API version: #{api_version}")
       end
-      if url =~ /https:|http:/
-        @url = url
-      else
-        @url = "http://#{url}"
-      end
+
+      # Prepend http:// and remove trailing slashes
+      url = "http://#{url}" if url !~ /https:|http:/
+      url.gsub!(/\/+$/, '')
+      @url = url
+
+      @credentials = {:user => username, :password => password}
       @api_version = api_version
-      @auth = Jiraby::JSONResource.new(auth_url)
-      @rest = Jiraby::JSONResource.new(base_url)
+      @_field_mapping = nil
+
+      # All REST API access is done through the @rest attribute
+      @rest = Jiraby::JSONResource.new(base_url, @credentials)
     end #initialize
 
-    attr_reader :url, :api_version
+    attr_reader :url, :api_version, :rest
 
     # Return a list of known Jira API versions.
     #
@@ -70,58 +69,6 @@ module Jiraby
       "#{@url}/rest/api/#{@api_version}"
     end
 
-    # Login to Jira using the given username/password.
-    #
-    # @param [String] username
-    #   Log in as this user
-    # @param [String] password
-    #   Password for the given username
-    #
-    # @return [Bool]
-    #   `true` if login was successful, `false` otherwise
-    #
-    def login(username, password)
-      credentials = {:username => username, :password => password}
-      # TODO: Factor this out into Jiraby::Rest methods
-      begin
-        response = @auth.post credentials
-      # TODO: Somehow log or otherwise indicate the cause of failure here
-      rescue RestClient::Exception
-        return false
-      rescue Errno::ECONNREFUSED
-        return false
-      else
-        if response['session']
-          session = {response['session']['name'] => response['session']['value']}
-          @rest = JSONResource.new(
-            base_url, :headers => {:cookies => session}
-          )
-          return true
-        # TODO: Somehow log or otherwise indicate the cause of failure here
-        else
-          return false
-        end
-      end
-    end #login
-
-
-    # Log out of Jira
-    def logout
-      begin
-        @auth.delete
-      # TODO: Somehow log or otherwise indicate the cause of failure here
-      rescue RestClient::Exception
-        return false
-      rescue Errno::ECONNREFUSED
-        return false
-      else
-        @rest = Jiraby::JSONResource.new(base_url)
-        return true
-      end
-    end #logout
-
-
-
     # Raise an exception if the current API version is one of those listed.
     #
     # @param [String] feature
@@ -137,53 +84,128 @@ module Jiraby
       end
     end #not_implemented_in
 
-    # REST wrapper methods
-    def get(path)
-      @rest[path].get
+    # Return a URL query, suitable for use in a GET/DELETE/HEAD request
+    # that accepts queries like `?var1=value1&var2=value2`.
+    def _path_with_query(path, query={})
+      # TODO: Escape special chars
+      params = query.map {|k,v| "#{k}=#{v}"}.join("&")
+      if params.empty?
+        return path
+      else
+        return "#{path}?#{params}"
+      end
+    end
+
+    # REST wrapper methods returning Jiraby::Entity
+    def get(path, query={})
+      @rest[_path_with_query(path, query)].get
+    end
+
+    def delete(path, query={})
+      @rest[_path_with_query(path, query)].delete
     end
 
     def put(path, data)
       @rest[path].put data
     end
 
-    def delete(path)
-      @rest[path].delete
-    end
-
     def post(path, data)
       @rest[path].post data
     end
 
+    # Find all issues matching the given JQL query, and return an
+    # `Enumerator` that yields each one as an Issue object.
+    # Each Issue is fetched from the REST API as needed.
     #
-    #
-    # TODO: Hack out everything below this and move it to higher-level
-    # abstractions. Keep the Jira class low-level.
-    #
-    #
-
-    # Invoke the 'search' method to find issues matching the given JQL query,
-    # and return the raw JSON response.
-    #
-    # @param [String] jql
+    # @param [String] jql_query
     #   JQL query for the issues you want to match
-    # @param [Integer, String] start_at
-    #   0-based index of the first issue to match
-    # @param [Integer, String] max_results
-    #   Maximum number of issues to return
     #
-    # FIXME: Adjust this so it gets all results by fetching subsequent pages
-    def search(jql, start_at=0, max_results=50)
-      result = @rest['search'].post(
-        {
-          :jql => jql,
-          :startAt => start_at.to_i,
-          :maxResults => max_results.to_i,
-        }
-      )
-      return result.issues.collect do |issue_json|
-        Issue.new(self, issue_json)
+    # @return [Enumerator]
+    #
+    def search(jql_query)
+      params = {
+        :jql => jql_query,
+      }
+      issues = self.enumerator(:post, 'search', params, 'issues')
+      return Enumerator.new do |e|
+        issues.each do |data|
+          e << Issue.new(self, data)
+        end
       end
-    end #search
+    end
+
+    # Return an Enumerator yielding items returned by a REST method that
+    # accepts `startAt` and `maxResults` parameters. This allows you to
+    # iterate through large data sets
+    #
+    # For example, using the issue `search` method to look up all issues
+    # in project "FOO", then using `each` to iterate over them:
+    #
+    #     query = 'project=FOO order by key'
+    #     jira.enumerator(
+    #       :post, 'search', {:jql => query}, 'issues'
+    #     ).each do |issue|
+    #       puts "#{issue.key}: #{issue.fields.summary}"
+    #     end
+    #
+    # The output might be:
+    #
+    #   FOO-1: First issue in Foo project
+    #   FOO-2: Another issue
+    #   (...)
+    #   FOO-149: Penultimate issue
+    #   FOO-150: Last issue
+    #
+    # Below is a complete list of Jira REST API methods that accept `startAt`
+    # and `maxResults`.
+    #
+    # Returning Entity:
+    #   GET /dashboard => { 'dashboards' => [...], 'total' => N } (dashboards)
+    #   GET /search => { 'issues' => [...], 'total' => N } (issues)
+    #   POST /search => { 'issues' => [...], 'total' => N } (issues)
+    #
+    # Returning Array of Entity:
+    #   GET /user/assignable/multiProjectSearch => [...] (users)
+    #   GET /user/assignable/search => [...] (users)
+    #   GET /user/permission/search => [...] (users)
+    #   GET /user/search => [...] (users)
+    #   GET /user/viewissue/search => [...] (users)
+    #
+    def enumerator(method, path, params={}, list_key=nil)
+      max_results = @@max_results
+      return Enumerator.new do |enum|
+        page = 0
+        more = true
+        while(more) do
+          paged_params = params.merge({
+            :startAt => page * max_results,
+            :maxResults => max_results
+          })
+          response = self.send(method, path, paged_params)
+
+          # Some methods (like 'search') return an Entity, with the list of
+          # items indexed by `list_key`.
+          if response.is_a?(Jiraby::Entity)
+            items = response[list_key]
+          # Others (like 'user/search') return an array of Entity.
+          elsif response.is_a?(Array)
+            items = response
+          else
+            raise RuntimeError.new("Unexpected data: #{response}")
+          end
+
+          items.to_a.each do |item|
+            enum << item
+          end
+
+          if items.to_a.count < max_results
+            more = false
+          else
+            page += 1
+          end
+        end # while(more)
+      end # Enumerator.new
+    end
 
     # Return the Issue with the given key.
     #
@@ -197,7 +219,10 @@ module Jiraby
     #   If the issue was not found or fetching failed
     #
     def issue(key)
-      json = @rest["issue/#{key}"].get
+      if key.nil? || key.to_s.strip.empty?
+        raise ArgumentError.new("Issue key is required")
+      end
+      json = self.get "issue/#{key}"
       if json and (json.empty? or json['errorMessages'])
         raise IssueNotFound.new("Issue '#{key}' not found in Jira")
       else
@@ -218,9 +243,9 @@ module Jiraby
     # @return [Issue]
     #
     def create_issue(project_key, issue_type='Bug')
-      issue_data = @rest['issue'].post(
-        {"fields" => {"project" => {"key" => project_key} } }
-      )
+      issue_data = self.post 'issue', {
+        "fields" => {"project" => {"key" => project_key} }
+      }
       return Issue.new(self, issue_data) if issue_data
       return nil
     end #create_issue
@@ -236,7 +261,7 @@ module Jiraby
     #   nil if no such project is found.
     #
     def project(key)
-      json = @rest["project/#{key}"].get
+      json = self.get "project/#{key}"
       if json and (json.empty? or json['errorMessages'])
         raise ProjectNotFound.new("Project '#{key}' not found in Jira")
       else
@@ -251,8 +276,8 @@ module Jiraby
     # TODO: Move this into the Project class?
     #
     def project_meta(project_key)
-      meta = @rest['issue/createmeta'].get({'expand' => 'projects.issuetypes.fields'})
-      metadata = meta['projects'].find {|proj| proj['key'] == project_key}
+      meta = self.get 'issue/createmeta?expand=projects.issuetypes.fields'
+      metadata = meta.projects.find {|proj| proj['key'] == project_key}
       if metadata and !metadata.nil?
         return metadata
       else
@@ -261,7 +286,8 @@ module Jiraby
     end #project_meta
 
 
-    # Return the total number of issues matching the given JQL query.
+    # Return the total number of issues matching the given JQL query, or
+    # the count of all issues if no JQL query is given.
     #
     # @param [String] jql
     #   JQL query for the issues you want to match
@@ -270,62 +296,23 @@ module Jiraby
     #   Number of issues matching the query
     #
     def count(jql='')
-      return search(jql, 0, 1)['total']
+      result = self.post 'search', {
+        :jql => jql,
+        :startAt => 0,
+        :maxResults => 1,
+        :fields => [''],
+      }
+      return result.total
     end #count
 
 
-    # Return all of the issue keys matching the given JQL query.
-    #
-    # @param [String] jql
-    #   JQL query for the issues you want to match
-    #
-    # @return [Array<String>]
-    #   The keys of all issues matching the query
-    #
-    def issue_keys(jql='')
-      # Issue keys will be accumulated here
-      keys = []
-      # Fetch up to 50 issue keys at a time
-      max_results = 50
-      start = 0
-
-      # Get the first batch
-      results = search(jql, start, max_results)
-
-      # Until we've gotten all the issues, get successive batches
-      while results['total'] >= (start + results['issues'].length)
-        keys.concat(results['issues'].collect {|iss| iss['key']})
-        start += max_results
-        results = search(jql, start, max_results)
-      end
-
-      return keys
-    end #issue_keys
-
-
-    # Find all issues matching the given JQL query, and return an
-    # `Enumerator::Generator` that yields each one as an Issue object.
-    # Each Issue is fetched from the REST API as needed.
-    #
-    # @param [String] jql
-    #   JQL query for the issues you want to match
-    #
-    # @return [Enumerator::Generator]
-    #
-    def issues(jql='')
-      keys = issue_keys(jql)
-      issue_generator = Enumerator::Generator.new do |g|
-        for key in keys
-          g.yield issue(key)
-        end
-      end
-      return issue_generator
-    end #issues
-
-    # Return a hash of {'field_id' => 'Field Name'} for all fields
+    # Return a hash of 'field_id' => 'Field Name' for all fields
     def field_mapping
-      ids_and_names = @rest['field'].get.collect { |f| [f.id, f.name] }
-      return Hash[ids_and_names]
+      if @_field_mapping.nil?
+        ids_and_names = self.get('field').collect { |f| [f.id, f.name] }
+        @_field_mapping = Hash[ids_and_names]
+      end
+      return @_field_mapping
     end #field_mapping
 
   end # class Jira

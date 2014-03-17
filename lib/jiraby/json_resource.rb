@@ -31,6 +31,8 @@ module Jiraby
   #   is parsed as JSON and returned as a Hash; no exception is raised.
   #
   class JSONResource < RestClient::Resource
+    @@debug = false
+
     def initialize(url, options={}, backwards_compatibility=nil, &block)
       options[:headers] = {} if options[:headers].nil?
       options[:headers].merge!(:content_type => :json, :accept => :json)
@@ -73,6 +75,7 @@ module Jiraby
     # Wrap the given method to return a Hash response parsed from JSON
     #
     def wrap(method, additional_headers={}, &block)
+      puts "#{@url} wrap(#{method})" if @@debug
       response = maybe_error_response do
         send(method, additional_headers, &block)
       end
@@ -83,6 +86,7 @@ module Jiraby
     # parsed from JSON.
     #
     def wrap_with_payload(method, payload, additional_headers={}, &block)
+      puts "#{@url} wrap_with_payload(#{method}, #{payload})" if @@debug
       if payload.is_a?(Hash)
         payload = Yajl::Encoder.encode(payload)
       end
@@ -99,6 +103,7 @@ module Jiraby
       begin
         json = Yajl::Parser.parse(response)
       rescue Yajl::ParseError => ex
+        # FIXME: Sometimes getting "input must be a string or IO" error here
         raise JSONParseError.new(ex.message, response)
       else
         if json.is_a?(Hash)
@@ -119,6 +124,8 @@ module Jiraby
     def maybe_error_response(&block)
       begin
         yield
+      rescue RestClient::RequestTimeout => ex
+        raise ex
       rescue RestClient::Exception => ex
         ex.response
       end

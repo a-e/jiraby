@@ -8,110 +8,100 @@ versions 6.2 and up.
 [Full documentation is on rdoc.info](http://rubydoc.info/github/a-e/jiraby/master/frames).
 
 
-Usage
------
+Connect to Jira
+---------------
 
 Assuming your JIRA site is at `http://jira.enterprise.com`, and you have
 an account `picard` with password `earlgrey`, you can connect like so:
 
     require 'jiraby'
 
-    jira = Jiraby::Jira.new('http://jira.enterprise.com')
-    jira.login('picard', 'earlgrey')
+    host = 'jira.enterprise.com:8080' # :PORT is optional
+    username = 'picard'
+    password = 'earlgrey'
 
-You can provide a port number if needed:
+    jira = Jiraby::Jira.new(host, username, password)
 
-    jira = Jiraby::Jira.new('http://jira.enterprise.com:8080')
-
-Look up an issue by its key:
-
-    issue_15 = jira.issue('myproj-15')
-    issue_15 = jira.issue('MYPROJ-15') # case-insensitive
-
-View the raw data returned from Jira's REST API:
-
-    issue_15.data
-    => {
-      'id' => '10024',
-      'key' => 'MYPROJ-15',
-      'self' => 'http://jira.enterprise.com:8080/rest/api/2/issue/10024',
-      'fields' => {
-        'summary' => 'Realign the dilithium stabilizer matrix.',
-        ...
-      }
-    }
-
-See a list of field IDs, including any project-specific or other custom fields:
-
-    issue.field_ids
-    => [
-      "assignee",
-      "attachment",
-      "comment",
-      "customfield_10000",
-      ...
-    ]
-
-View field values:
-
-    issue['summary']
-    => "Realign the dilithium stabilizer matrix."
-    issue['duedate']
-    => "2014-03-31"
+[HTTP basic](http://en.wikipedia.org/wiki/Basic_access_authentication)
+authentication is used for all requests.
 
 
 REST API
 --------
 
 Methods in the [JIRA REST API](https://docs.atlassian.com/jira/REST/6.2/) can be
-accessed directly:
+accessed directly using the `#get`, `#put`, `#post`, and `#delete` methods:
 
-    jira.get('issue/TEST-1')
-    => {
-      "id"=>"10000",
-      "self"=>"http://localhost:8080/rest/api/2/issue/10000",
-      "key"=>"TEST-1",
-      "fields"=>{ ... }
+    jira.get 'serverInfo'                         # info about Jira server
+    jira.get 'issue/TEST-1'                       # full details of TEST-1 issue
+    jira.get 'field'                              # all fields, both System and Custom
+    jira.get 'user/search', :username => 'bob'    # all users matching "bob"
+    jira.get 'user/search?username=bob'           # all users matching "bob"
+
+    jira.put 'issue/TEST-1', :fields => {         # set one or more fields
+      :summary => "Modified summary",
+      :description => "New description"
     }
 
-    jira.get('serverInfo')
-    => {
-      "baseUrl"=>"http://localhost:8080",
-      "version"=>"6.2",
-      "versionNumbers"=>[6, 2, 0],
-      "buildNumber"=>6252,
-      "buildDate"=>"2014-02-19T00:00:00.000-0700",
-      "serverTime"=>"2014-03-06T08:27:04.116-0700",
-      "scmInfo"=>"aa343257d4ce030d9cb8c531be520be9fac1c996",
-      "serverTitle"=>"Jiraby Test"
-    }
+    jira.delete 'issue/TEST-1'                    # delete issue TEST-1
 
-    jira.get('resolution/1')
-    => {
-      "self"=>"http://localhost:8080/rest/api/2/resolution/1",
-      "id"=>"1",
-      "description"=>"A fix for this issue is checked into the tree and tested.",
-      "name"=>"Fixed"
-    }
+All REST methods return a `Jiraby::Entity` (a hash-like object built directly from
+the JSON response), or an `Array` of them (for those REST methods that return arrays).
 
-Passing parameters to GET:
 
-    jira.get('user/search?username=admin')
-    => [{"self"=>"http://localhost:8080/rest/api/2/user?username=admin",
-      "key"=>"admin",
-      "name"=>"admin",
-      "emailAddress"=>"epierce@automation-excellence.com",
-      "avatarUrls"=>
-       {"16x16"=>
-         "http://localhost:8080/secure/useravatar?size=xsmall&avatarId=10122",
-        "24x24"=>
-         "http://localhost:8080/secure/useravatar?size=small&avatarId=10122",
-        "32x32"=>
-         "http://localhost:8080/secure/useravatar?size=medium&avatarId=10122",
-        "48x48"=>"http://localhost:8080/secure/useravatar?avatarId=10122"},
-      "displayName"=>"Admin Istrator",
-      "active"=>true,
-      "timeZone"=>"America/Denver"}]
+Wrappers
+--------
+
+You can look up a Jira issue using the `#issue` method:
+
+    issue = jira.issue('myproj-15')
+    issue = jira.issue('MYPROJ-15') # case-insensitive
+
+    issue.class
+    # => Jiraby::Issue
+
+If you're interested, view the raw data returned from Jira:
+
+    issue.data
+    # => {
+    #   'id' => '10024',
+    #   'key' => 'MYPROJ-15',
+    #   'self' => 'http://jira.enterprise.com:8080/rest/api/2/issue/10024',
+    #   'fields' => {
+    #     'summary' => 'Realign the dilithium stabilizer matrix.',
+    #     ...
+    #   }
+    # }
+
+Or use the higher-level methods provided by the `Issue` class:
+
+    issue['foo']              # Value of field 'foo'; same as `issue.data.fields.foo`
+    issue['foo'] = "Newval"   # Assign to field 'foo'
+    issue.subtasks            # Array of issue keys for this issue's subtasks
+    issue.is_subtask?         # True if issue is a sub-task of another issue
+    issue.parent              # For subtasks, issue key of parent issue
+    issue.is_assigned?        # True if issue is assigned
+
+When modifying fields, the changes will appear in the `Issue` instance immediately:
+
+    issue['summary'] = "Modified summary"
+
+    issue['summary']
+    # => "Modified summary"
+
+But these changes are not saved back to Jira until you call `#save!`. Before
+saving, you can check for pending changes:
+
+    issue.pending_changes?
+    # => true
+
+    issue.pending_changes
+    # => {"summary" => "Modified summary"}
+
+Then save the updates back to Jira:
+
+    issue.save!
+    # => true
 
 
 Copyright
@@ -119,7 +109,7 @@ Copyright
 
 The MIT License
 
-Copyright (c) 2011 Brian Moelk, Eric Pierce
+Copyright (c) 2014 Eric Pierce
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
