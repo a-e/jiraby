@@ -32,20 +32,18 @@ REST API
 Methods in the [JIRA REST API](https://docs.atlassian.com/jira/REST/6.2/) can be
 accessed directly using the `#get`, `#put`, `#post`, and `#delete` methods:
 
-```ruby
-jira.get 'serverInfo'                         # info about Jira server
-jira.get 'issue/TEST-1'                       # full details of TEST-1 issue
-jira.get 'field'                              # all fields, both System and Custom
-jira.get 'user/search', :username => 'bob'    # all users matching "bob"
-jira.get 'user/search?username=bob'           # all users matching "bob"
+    jira.get 'serverInfo'                         # info about Jira server
+    jira.get 'issue/TEST-1'                       # full details of TEST-1 issue
+    jira.get 'field'                              # all fields, both System and Custom
+    jira.get 'user/search', :username => 'bob'    # all users matching "bob"
+    jira.get 'user/search?username=bob'           # all users matching "bob"
 
-jira.put 'issue/TEST-1', :fields => {         # set one or more fields
-  :summary => "Modified summary",
-  :description => "New description"
-}
+    jira.put 'issue/TEST-1', :fields => {         # set one or more fields
+      :summary => "Modified summary",
+      :description => "New description"
+    }
 
-jira.delete 'issue/TEST-1'                    # delete issue TEST-1
-```
+    jira.delete 'issue/TEST-1'                    # delete issue TEST-1
 
 All REST methods return a `Jiraby::Entity` (a hash-like object built directly from
 the JSON response), or an `Array` of them (for those REST methods that return arrays).
@@ -60,20 +58,20 @@ You can look up a Jira issue using the `#issue` method:
     issue = jira.issue('MYPROJ-15') # case-insensitive
 
     issue.class
-    #=> Jiraby::Issue
+    # => Jiraby::Issue
 
 If you're interested, view the raw data returned from Jira:
 
     issue.data
-    => {
-      'id' => '10024',
-      'key' => 'MYPROJ-15',
-      'self' => 'http://jira.enterprise.com:8080/rest/api/2/issue/10024',
-      'fields' => {
-        'summary' => 'Realign the dilithium stabilizer matrix.',
-        ...
-      }
-    }
+    # => {
+    #   'id' => '10024',
+    #   'key' => 'MYPROJ-15',
+    #   'self' => 'http://jira.enterprise.com:8080/rest/api/2/issue/10024',
+    #   'fields' => {
+    #     'summary' => 'Realign the dilithium stabilizer matrix.',
+    #     ...
+    #   }
+    # }
 
 Or use the higher-level methods provided by the `Issue` class:
 
@@ -89,21 +87,21 @@ When modifying fields, the changes will appear in the `Issue` instance immediate
     issue['summary'] = "Modified summary"
 
     issue['summary']
-    #=> "Modified summary"
+    # => "Modified summary"
 
 But these changes are not saved back to Jira until you call `#save!`. Before
 saving, you can check for pending changes:
 
     issue.pending_changes?
-    => true
+    # => true
 
     issue.pending_changes
-    => {"summary" => "Modified summary"}
+    # => {"summary" => "Modified summary"}
 
 Then save the updates back to Jira:
 
     issue.save!
-    => true
+    # => true
 
 
 Copyright
