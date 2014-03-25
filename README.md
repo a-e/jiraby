@@ -1,13 +1,29 @@
 Jiraby
 ======
+[![Build Status](https://secure.travis-ci.org/a-e/jiraby.png?branch=dev)](http://travis-ci.org/a-e/jiraby)
 
 Jiraby is a Ruby wrapper for the [JIRA](http://www.atlassian.com/JIRA)
 [REST API](https://docs.atlassian.com/jira/REST/latest/), supporting Jira
-versions 6.2 and up.
+versions 6.x onward.
 
-[Full documentation is on rdoc.info](http://rubydoc.info/github/a-e/jiraby/master/frames).
+- [Documentation](http://rubydoc.info/github/a-e/jiraby/master/frames).
+- [Gem](http://rubygems.org/gems/jiraby)
+- [Status](https://travis-ci.org/a-e/jiraby)
 
-[![Build Status](https://secure.travis-ci.org/a-e/jiraby.png?branch=dev)](http://travis-ci.org/a-e/jiraby)
+
+Install
+-------
+
+Just do:
+
+    $ gem install jiraby
+
+Or add:
+
+    gem 'cherby'
+
+to your project's Gemfile or gemspec.
+
 
 Connect to Jira
 ---------------
