@@ -6,7 +6,8 @@ Jiraby is a Ruby wrapper for the [JIRA](http://www.atlassian.com/JIRA)
 [REST API](https://docs.atlassian.com/jira/REST/latest/), supporting Jira
 versions 6.x onward.
 
-- [Documentation](http://rubydoc.info/github/a-e/jiraby/master/frames).
+- [Source](https://github.com/a-e/jiraby)
+- [Documentation](http://rubydoc.info/github/a-e/jiraby/master/frames)
 - [Gem](http://rubygems.org/gems/jiraby)
 - [Status](https://travis-ci.org/a-e/jiraby)
 
