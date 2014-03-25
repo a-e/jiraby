@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name = "jiraby"
-  s.version = "0.0.1"
+  s.version = "0.0.2"
   s.summary = "Jira-Ruby bridge"
   s.description = <<-EOS
     Jiraby is a Ruby wrapper for the JIRA REST API,
