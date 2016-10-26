@@ -21,7 +21,7 @@ Just do:
 
 Or add:
 
-    gem 'cherby'
+    gem 'jiraby'
 
 to your project's Gemfile or gemspec.
 
