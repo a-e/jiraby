@@ -4,6 +4,11 @@ require 'jiraby/entity'
 module Jiraby
   class Issue
     def initialize(jira_instance, json_data={})
+      # TODO:
+      # if !jira_instance.is_a?(Jiraby::Jira)
+      # ...
+      # ALSO:
+      # if json_data does not include `fields`, nest json_data inside `fields`
       @jira = jira_instance
       @data = Entity.new(json_data)
       # Modifications are stored here until #save is called
